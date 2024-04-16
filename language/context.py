@@ -1,19 +1,36 @@
+from abc import ABC, abstractmethod
+
+class Type(ABC):
+    
+    @abstractmethod
+    def isInstanceOf(self,type):
+        pass
+    
+    @abstractmethod
+    def __str__(self):
+        pass
+    
+    @abstractmethod
+    def __eq__(self,type):
+        pass
+    
+
 class Context():
-    next_var = 0
-
-    stdlib_symbols = {}
-
-    def __init__(self, function_name="", arg_name="", parent=None):
-        self.parent = parent
+    def __init__(self,parent=None):
         self.symbols = {} if parent is None else parent.symbols.copy()
-        self.function_name = function_name
-        self.arg_name = arg_name
+        self.used = set()
 
     def in_global_scope(self):
         return self.parent is None
 
-    def next_variable(self):
-        result = f"var_{Context.next_var}"
-        Context.next_var += 1
-        return result
-
+    def used_symbols(self):
+        pass
+    
+    def use_symbol(self,symbol):
+        self.used.add(symbol)
+    
+    def is_declared(self,symbol):
+        return symbol in self.symbols
+    
+    def declare_symbol(self,symbol,type):
+        self.symbols[symbol]=type

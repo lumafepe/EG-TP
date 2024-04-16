@@ -1,12 +1,18 @@
 from abc import ABC, abstractmethod
 from .context import Context
-from typing import List,Tuple
+from .issue import Issue
+from typing import List
+
 
 class Element(ABC):
     @abstractmethod
-    def validate(self, context) -> Tuple[bool, List[str]]:
+    def validate(self, context) -> List[Issue]:
         pass
 
     @abstractmethod
     def __eq__(self, obj) -> bool:
+        pass
+    
+    @abstractmethod
+    def __str__(self, obj) -> bool:
         pass
