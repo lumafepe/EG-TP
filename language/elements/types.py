@@ -1,6 +1,8 @@
 from abc import ABC, abstractmethod
 from enum import Enum
-class Type(ABC):
+from .element import Element
+
+class Type(Element):
     #Determines whether an instance of a specified type can be assigned to a variable of the current type
     @abstractmethod
     def isAssignableFrom(self, other) -> bool:

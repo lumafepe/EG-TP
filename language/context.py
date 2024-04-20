@@ -1,11 +1,5 @@
 from abc import ABC, abstractmethod
-from enum import Enum
-from .types import Type
-
-class Kind(Enum):
-    Constant = 0
-    Variable = 1
-    Literal = 2
+from .elements.types import Type
 
 class Context():
     def __init__(self,parent=None):
