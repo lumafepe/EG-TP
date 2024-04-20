@@ -97,6 +97,26 @@ class T(Transformer):
         return token #TODO
     def condition(self,token):
         return token #TODO
+    
+    def if_cond(self,token):
+        return token #TODO
+    def while_cond(self,token):
+        return token #TODO
+    def do_while(self,token):
+        return token #TODO
+    
+    def function(self,token):
+        return token #TODO
+    def params(self,token):
+        return token #TODO
+    def function_call(self,token):
+        return token #TODO
+    def func_return(self,token):
+        return token #TODO
+    
+    def program(self,token):
+        return token #TODO
+    
         
         
         
