@@ -1,4 +1,6 @@
-from abc import abstractmethod
+from abc import ABC, abstractmethod
+from .types import Type,BOOL,INT,LIST,ARRAY,TUPLE,CHAR,STRING
+from typing import Iterator
 from enum import Enum
 from .element import Element
 from .types import Type, INT, BOOL, CHAR, STRING, TUPLE, ARRAY, LIST
@@ -41,6 +43,25 @@ class Value(Expression):
 
     def __str__(self) -> str:
         return self.type.printInstance(self.value)
+
+class Tuple(Expression):
+    def __init__(self, operator: str, operands: list[Expression], allowedTypes: list[Type]) -> None:
+        pass
+
+    def kind(self) -> Kind:
+        pass
+
+    def validate(self, context: Context) -> Iterator[Issue]:
+        pass
+
+    def __eq__(self, obj: object) -> bool:
+        pass
+    
+    def __str__(self) -> str:
+        pass
+    def type(self) -> Type:
+        return super().type()
+
 
 
 #Assumes all operands are of the same type, or are assignable to the same type
