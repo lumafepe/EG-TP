@@ -1,8 +1,14 @@
 from lark import Transformer
-from language import types,elements
 
+from language import types,elements
+from collections import Counter
 
 class T(Transformer):
+    
+    def __init__(self) -> None:
+        super().__init__()
+        self.counter = Counter()
+    
     def PRIMITIVE(self,token):
         match token:
             case 'int':
@@ -16,11 +22,12 @@ class T(Transformer):
     def IDENTIFIER(self,token):
         return str(token)
     def INT(self,token):
-        return elements.Const(int(token),types.INT())
+        print(token)
+        return elements.Value(int(token),types.INT())
     def CHAR(self,token):
-        return elements.Const(token,types.CHAR())
+        return elements.Value(token,types.CHAR())
     def STRING(self,token):
-        return elements.Const(token,types.STRING())
+        return elements.Value(token,types.STRING())
     
     def tuple_type(self,token):
         return types.TUPLE(token)
@@ -60,25 +67,53 @@ class T(Transformer):
         return token
     
     def op_or(self,token):
-        return elements.Operation(token[1],[token[0],token[2]])
+        return elements.Or(token[0],token[2])
     def op_and(self,token):
-        return elements.Operation(token[1],[token[0],token[2]])
+        return elements.And(token[0],token[2])
     def op_equality(self,token):
-        return elements.Operation(token[1],[token[0],token[2]])
+        match token[1]:
+            case '!=':
+                return elements.Inequality(token[0],token[2])
+            case '==':
+                return elements.Equality(token[0],token[2])
     def op_comparison(self,token):
-        return elements.Operation(token[1],[token[0],token[2]])
+        match token[1]:
+            case '<':
+                return elements.Lt(token[0],token[2])
+            case '<=':
+                return elements.Lte(token[0],token[2])
+            case '>':
+                return elements.Gt(token[0],token[2])
+            case '>=':
+                return elements.Gte(token[0],token[2])
     def op_sum(self,token):
-        return elements.Operation(token[1],[token[0],token[2]])
+        match token[1]:
+            case '-':
+                return elements.Subtraction(token[0],token[2])
+            case '+':
+                return elements.Addition(token[0],token[2])
     def op_multiplication(self,token):
-        return elements.Operation(token[1],[token[0],token[2]])
+        match token[1]:
+            case '*':
+                return elements.Multiplication(token[0],token[2])
+            case '/':
+                return elements.Division(token[0],token[2])
+            case '%':
+                return elements.Modulo(token[0],token[2])
     def op_exponentiation(self,token):
-        return elements.Operation(token[1],[token[0],token[2]])
+        return elements.Expotentiation(token[0],token[2])
     def op_manipulation(self,token):
-        return elements.Operation(str(token[0]),[token[1]])
+        match token[0]:
+            case '~':
+                return elements.BitwiseNot(token[1])
+            case '!':
+                return elements.Not(token[1])
+            case '#':
+                return elements.Length(token[1])
     def op_element(self,token):
-        return elements.Operation('#'+token[1],[token[0]])
+        return elements.Or(token[0],token[2])#TODO
     def op_indexation(self,token):
-        return elements.Operation('#[]',[token[0],token[1]])
+        return elements.Or(token[0],token[2])#TODO
 
     
     def expression(self,token):
@@ -87,10 +122,14 @@ class T(Transformer):
     def KIND(self,token):
         return token
     def declaration(self,token):
+        self.counter['declaration']+=1
         return token #TODO
     def assignment(self,token): 
+        self.counter['assignment']+=1
         return token #TODO
-    def decl_ass(self,token): 
+    def decl_ass(self,token):
+        self.counter['declaration']+=1
+        self.counter['assignment']+=1
         return token #TODO
 
     def scope(self,token):
@@ -106,15 +145,18 @@ class T(Transformer):
         return token #TODO
     
     def function(self,token):
+        self.counter['functions']+=1
         return token #TODO
     def params(self,token):
         return token #TODO
     def function_call(self,token):
+        self.counter['function_call']+=1
         return token #TODO
     def func_return(self,token):
         return token #TODO
     
     def program(self,token):
+        self.counter['main_instructions']+=1
         return token #TODO
     
         

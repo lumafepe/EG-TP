@@ -28,7 +28,7 @@ lark_parser = r"""
     STRING: /"([^\b\t\n\r"]|\\[\\0btnr"])*"/
     IDENTIFIER: /[A-Za-z_]\w*/
 
-    tuple_type: "(" (type ","){2,} type? ")"
+    tuple_type: "(" (type ",")+ type? ")"
     array_type: "[" type "]"
     list_type: "<" type ">"
     type: PRIMITIVE | tuple_type | array_type | list_type
@@ -36,7 +36,7 @@ lark_parser = r"""
     _sequence: (expression ",")* expression?
 
     constant: INT | CHAR | STRING | BOOL
-    tuple: "(" (expression ","){2,} expression? ")"
+    tuple: "(" (expression ",")+ expression? ")"
     array: "[" _sequence "]" | type "[" INT "]"
     list: "<" (_sequence | (expression ",")* expression ":" expression) ">"
 
@@ -110,7 +110,7 @@ input = """
 """
 
 
-p = Lark(lark_parser,start="program") # cria um objeto parser
+p = Lark(lark_parser,start="expression") # cria um objeto parser
 tree = p.parse(input)  # retorna uma tree
 linguagem = T().transform(tree)
 print(linguagem)

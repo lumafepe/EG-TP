@@ -2,13 +2,13 @@ from abc import ABC, abstractmethod
 from .context import Context, Kind
 from .issue import Issue, IssueType
 from .types import Type,BOOL,INT,LIST,ARRAY,TUPLE,CHAR,STRING
-from typing import List
+from typing import Iterator
 from enum import Enum
 import re
 
 class Element(ABC):
     @abstractmethod
-    def validate(self, context: Context) -> iter[Issue]:
+    def validate(self, context: Context) -> Iterator[Issue]:
         pass
 
     @abstractmethod
@@ -29,10 +29,10 @@ class Expression(Element):
         pass
 
 class Value(Expression):
-    def __init__(self,value,type:Type):
-        assert type in [INT, BOOL, CHAR, STRING]
+    def __init__(self,value,valueType:Type):
+        assert type(valueType) in [INT, BOOL, CHAR, STRING]
         self.value = value
-        self.type = type
+        self.type = valueType
 
     def kind(self) -> Kind:
         return Kind.Constant
@@ -40,7 +40,7 @@ class Value(Expression):
     def type(self) -> Type:
         return self.type
 
-    def validate(self, context: Context) -> iter[Issue]:
+    def validate(self, context: Context) -> Iterator[Issue]:
         return []
     
     def __eq__(self, obj) -> bool:
@@ -60,7 +60,7 @@ class Operation(Expression):
     def kind(self) -> Kind:
         return Kind.Constant if all(o.kind() == Kind.Constant for o in self.operands) else Kind.Literal
 
-    def validate(self, context: Context) -> iter[Issue]:
+    def validate(self, context: Context) -> Iterator[Issue]:
         for o in self.operands:
             yield from o.validate(context)
         
@@ -78,9 +78,8 @@ class Operation(Expression):
             and self.operands == obj.operands
 
 class UnaryOperation(Operation):
-    def __init__(self, operator: str, suffixed: bool, operand: Expression, allowedTypes: list[Type]) -> None:
+    def __init__(self, operator: str, operand: Expression, allowedTypes: list[Type]) -> None:
         super().__init__(operator, [operand], allowedTypes)
-        self.suffixed = suffixed
 
     def operand(self):
         return self.operands[0]
@@ -102,36 +101,97 @@ class BinaryOperation(Operation):
     def __str__(self) -> bool:
         return f"{self.lterm()} {self.operator} {self.rterm()}"
 
+class BooleanBinaryOperation(BinaryOperation):
+    def type(self) -> Type:
+        return BOOL()
+
+class Or(BooleanBinaryOperation):
+    def __init__(self, lterm: Expression, rterm: Expression) -> None:
+        super().__init__('||', lterm, rterm, [BOOL()])
+class And(BooleanBinaryOperation):
+    def __init__(self, lterm: Expression, rterm: Expression) -> None:
+        super().__init__('&&', lterm, rterm, [BOOL()])
+
+class Equality(BooleanBinaryOperation):
+    def __init__(self, lterm: Expression, rterm: Expression,) -> None:
+        super().__init__('==', lterm, rterm, [INT(),STRING(),CHAR(),BOOL(),TUPLE(),ARRAY(),LIST()])
+
+class Inequality(BooleanBinaryOperation):
+    def __init__(self, lterm: Expression, rterm: Expression,) -> None:
+        super().__init__('==', lterm, rterm, [INT(),STRING(),CHAR(),BOOL(),TUPLE(),ARRAY(),LIST()])
+
+class Gt(BooleanBinaryOperation):
+    def __init__(self, lterm: Expression, rterm: Expression) -> None:
+        super().__init__('>', lterm, rterm, [CHAR(),INT()])
+class Gte(BooleanBinaryOperation):
+    def __init__(self, lterm: Expression, rterm: Expression) -> None:
+        super().__init__('>=', lterm, rterm, [CHAR(),INT()])
+class Lt(BooleanBinaryOperation):
+    def __init__(self, lterm: Expression, rterm: Expression) -> None:
+        super().__init__('<', lterm, rterm, [CHAR(),INT()])
+class Lte(BooleanBinaryOperation):
+    def __init__(self, lterm: Expression, rterm: Expression) -> None:
+        super().__init__('<=', lterm, rterm, [CHAR(),INT()])
+
+class NumericBinaryOperation(BinaryOperation):
+    def __init__(self, operator: str, lterm: Expression, rterm: Expression) -> None:
+        super().__init__(operator, lterm, rterm, [INT(),CHAR()])
+        
+    def type(self) -> Type:
+        if self.lterm.type == CHAR() and self.rterm.type == CHAR():
+            return CHAR()
+        else:
+            return INT()
+
+class Addition(NumericBinaryOperation):
+    def __init__(self, lterm: Expression, rterm: Expression) -> None:
+        super().__init__('+', lterm, rterm)
+
+class Subtraction(NumericBinaryOperation):
+    def __init__(self, lterm: Expression, rterm: Expression) -> None:
+        super().__init__('-', lterm, rterm)
+
+class Multiplication(NumericBinaryOperation):
+    def __init__(self, lterm: Expression, rterm: Expression) -> None:
+        super().__init__('*', lterm, rterm)
+
+class Division(NumericBinaryOperation):
+    def __init__(self, lterm: Expression, rterm: Expression) -> None:
+        super().__init__('/', lterm, rterm)
+
+class Modulo(NumericBinaryOperation):
+    def __init__(self, lterm: Expression, rterm: Expression) -> None:
+        super().__init__('%', lterm, rterm)
+
+class Expotentiation(NumericBinaryOperation):
+    def __init__(self, lterm: Expression, rterm: Expression) -> None:
+        super().__init__('^', lterm, rterm)
 
 
+class BitwiseNot(UnaryOperation):
+    def __init__(self, operand: Expression) -> None:
+        super().__init__('~', operand,[INT(),CHAR()])
+    def type(self) -> Type:
+        return self.operand.type()
 
+class Not(UnaryOperation):
+    def __init__(self, operand: Expression) -> None:
+        super().__init__('!', operand,[BOOL()])
+    def type(self) -> Type:
+        return BOOL()
 
-
-
-
+class Length(BinaryOperation):
+    def __init__(self, lterm: Expression, rterm: Expression) -> None:
+        super().__init__('#', lterm, rterm, [ARRAY()])
+    def type(self) -> Type:
+        return INT()
 
 """
 
 # class syntax
 
 class Operation_Type(Enum):
-    OR = '||'
-    AND = '&&'
-    EQUALITY = '=='
-    INEQUALITY = '!='
-    GT = '>'
-    GTE = '>='
-    LT = '<'
-    LTE = '<='
-    ADDITION = '+'
-    SUBTRACTION = '-'
-    MULTIPLICATION = '*'
-    DIVISION = '/'
-    MODULO = '%' 
-    EXPONENTIATION = '^'
-    BITWISE_NOT = '~'
-    NOT = '!'
-    HASHTAG = '#' #TODO Change
+    HASHTAG = '#'
     INDEXATION = '#[]' #TODO Change
     ELEMENT = '##'
 

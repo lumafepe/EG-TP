@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from enum import Enum
-from types import Type
+from .types import Type
 
 class Kind(Enum):
     Constant = 0

@@ -1,10 +1,9 @@
 from abc import ABC, abstractmethod
-from __future__ import annotations
 from enum import Enum
 class Type(ABC):
     #Determines whether an instance of a specified type can be assigned to a variable of the current type
     @abstractmethod
-    def isAssignableFrom(self, other: Type) -> bool:
+    def isAssignableFrom(self, other) -> bool:
         pass
 
     @abstractmethod
