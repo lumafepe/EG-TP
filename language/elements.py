@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
-from .context import Context
-from .issue import Issue
+from .context import Context, Kind
+from .issue import Issue, IssueType
 from .types import Type,BOOL,INT,LIST,ARRAY,TUPLE,CHAR,STRING
 from typing import List
 from enum import Enum
@@ -8,7 +8,7 @@ import re
 
 class Element(ABC):
     @abstractmethod
-    def validate(self, context) -> List[Issue]:
+    def validate(self, context: Context) -> iter[Issue]:
         pass
 
     @abstractmethod
@@ -16,29 +16,101 @@ class Element(ABC):
         pass
     
     @abstractmethod
-    def __str__(self, obj) -> bool:
-        pass
-    @abstractmethod
-    def returnType(self) -> Type:
+    def __str__(self) -> str:
         pass
 
-class Const(Element):
+class Expression(Element):
+    @abstractmethod
+    def kind(self) -> Kind:
+        pass
+
+    @abstractmethod
+    def type(self) -> Type:
+        pass
+
+class Value(Expression):
     def __init__(self,value,type:Type):
+        assert type in [INT, BOOL, CHAR, STRING]
         self.value = value
         self.type = type
-        
-    def validate(self, context) -> List[Issue]:
-        pass
-        
-    def __eq__(self, obj) -> bool:
-        return self.__class__ == obj.__class__ and self.type == obj.type and self.value == obj.value
-        
-    def returnType(self) -> Type:
-        return self.type
-    
-    def __str__(self) -> str:
-        return str(self.type) + str(self.value)
 
+    def kind(self) -> Kind:
+        return Kind.Constant
+    
+    def type(self) -> Type:
+        return self.type
+
+    def validate(self, context: Context) -> iter[Issue]:
+        return []
+    
+    def __eq__(self, obj) -> bool:
+        return type(self) == type(obj) and self.type == obj.type and self.value == obj.value
+
+    def __str__(self) -> str:
+        return self.type.printInstance(self.value)
+
+
+#Assumes all operands are of the same type, or are assignable to the same type
+class Operation(Expression):
+    def __init__(self, operator: str, operands: list[Expression], allowedTypes: list[Type]) -> None:
+        self.operator = operator
+        self.operands = operands
+        self.allowedTypes = allowedTypes
+
+    def kind(self) -> Kind:
+        return Kind.Constant if all(o.kind() == Kind.Constant for o in self.operands) else Kind.Literal
+
+    def validate(self, context: Context) -> iter[Issue]:
+        for o in self.operands:
+            yield from o.validate(context)
+        
+        bigger_type = self.operands[0].type()
+        for o in self.operands:
+            if not bigger_type.isAssignableFrom(o.type()):
+                if o.type().isAssignableFrom(bigger_type):
+                    bigger_type = o.type()
+                else:
+                    yield Issue(IssueType.Error, "TypeError. TODO: make cool messages")
+
+    def __eq__(self, obj: object) -> bool:
+        return type(self) == type(obj) \
+            and self.operator == obj.operator \
+            and self.operands == obj.operands
+
+class UnaryOperation(Operation):
+    def __init__(self, operator: str, suffixed: bool, operand: Expression, allowedTypes: list[Type]) -> None:
+        super().__init__(operator, [operand], allowedTypes)
+        self.suffixed = suffixed
+
+    def operand(self):
+        return self.operands[0]
+    
+    def __str__(self) -> bool:
+        return f"{self.operand()}{self.operator}" if self.suffixed else f"{self.operator}{self.operand()}"
+
+
+class BinaryOperation(Operation):
+    def __init__(self, operator: str, lterm: Expression, rterm: Expression, allowedTypes: list[Type]) -> None:
+        super().__init__(operator, [lterm, rterm], allowedTypes)
+
+    def lterm(self):
+        return self.operands[0]
+    
+    def rterm(self):
+        return self.operands[1]
+
+    def __str__(self) -> bool:
+        return f"{self.lterm()} {self.operator} {self.rterm()}"
+
+
+
+
+
+
+
+
+
+"""
 
 # class syntax
 
@@ -63,7 +135,7 @@ class Operation_Type(Enum):
     INDEXATION = '#[]' #TODO Change
     ELEMENT = '##'
 
-class Operation(Element):
+class Operation(Expression):
     is_element = re.compile(r"#\d+")
     
     def __init__(self,opType:str,exps:list[Element]):
@@ -88,7 +160,7 @@ class Operation(Element):
                 case _:
                     return str(self.exps[0]) + f' {self.opType.value} ' + str(self.exps[1])
                 
-    def validate(self, context) -> List[Issue]:
+    def validate(self, context) -> iter[Issue]:
         errors=[]
         for exp in self.exps:
             exp.validate(context)
@@ -144,5 +216,5 @@ class Operation(Element):
                     return typ.type
                 elif typ.__class__ == TUPLE().__class__:
                     return self.types[self.exps[1].value]
-                     
 
+"""

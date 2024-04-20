@@ -1,9 +1,20 @@
 from abc import ABC, abstractmethod
+from __future__ import annotations
+from enum import Enum
 class Type(ABC):
-    
-    def isInstanceOf(self,value):
-        return value.getType() == self
-    
+    #Determines whether an instance of a specified type can be assigned to a variable of the current type
+    @abstractmethod
+    def isAssignableFrom(self, other: Type) -> bool:
+        pass
+
+    @abstractmethod
+    def printInstance(self, value) -> str:
+        pass
+
+    @abstractmethod
+    def __eq__(self, other: object):
+        pass
+
     @abstractmethod
     def __str__(self):
         pass
@@ -11,47 +22,91 @@ class Type(ABC):
     def __repr__(self) -> str:
         return str(self)
     
-    def __eq__(self,other):
-        return self.__class__ == other.__class__
 
-class INT(Type):
-    def __str__(self):
-        return 'INT'
+class Primitive(Type):
+    def __eq__(self, other):
+        return type(self) == type(other)
+
+class INT(Primitive):
+    def isAssignableFrom(self, other: Type) -> bool:
+        return type(other) in [INT, CHAR, BOOL]
     
-class STRING(Type):
-    def __str__(self):
-        return 'STRING'
+    def printInstance(self, value) -> str:
+        return str(value)
 
-class CHAR(Type):
     def __str__(self):
-        return 'CHAR'
+        return 'int'
+    
+class STRING(Primitive):
+    def isAssignableFrom(self, other: Type) -> bool:
+        return type(other) in [STRING]
+    
+    def printInstance(self, value) -> str:
+        return f'"{value}"'
 
-class BOOL(Type):
     def __str__(self):
-        return 'BOOL'
+        return 'string'
+
+class CHAR(Primitive):
+    def isAssignableFrom(self, other: Type) -> bool:
+        return type(other) in [CHAR]
+    
+    def printInstance(self, value) -> str:
+        return f"'{value}'"
+    
+    def __str__(self):
+        return 'char'
+
+class BOOL(Primitive):
+    def isAssignableFrom(self, other: Type) -> bool:
+        return type(other) in [BOOL]
+    
+    def printInstance(self, value) -> str:
+        return "true" if value else "false"
+
+    def __str__(self):
+        return 'bool'
 
 class TUPLE(Type):
-    def __init__(self,types : list[Type]):
-        self.types = types
-    def __str__(self):
-        return "Tuple ("+', '.join(str(t) for t in self.types)+')'
-    def __eq__(self, other):
-        return super().__eq__(other) and all(map(lambda x: x[0]==x[1],zip(self.types,other.types)))
+    def __init__(self, tupled: list[Type]):
+        assert len(tupled) >= 2
+        self.tupled = tupled
 
-class ARRAY(Type):
-    def __init__(self,type):
-        self.type = type
-        
+    def isAssignableFrom(self, other: Type) -> bool:
+        return isinstance(other, TUPLE) \
+            and len(self.tupled) == len(other.tupled) \
+            and all(a.isAssignableFrom(b) for a,b in zip(self.tupled,other.tupled))
+
+    def printInstance(self, value) -> str:
+        return f"({', '.join(t.printInstance(v) for t,v in zip(self.tupled, value))})"
+
+    def __eq__(self, other):
+        return type(self) == type(other) and self.tupled == other.tupled
+
     def __str__(self):
-        return f"Array [{str(self.type)}]"
+        return f"({', '.join(self.tupled)})"
+
+class Container(Type):
+    def __init__(self, contained: Type) -> None:
+        self.contained = contained
+
+    def isAssignableFrom(self, other: Type) -> bool:
+        return type(self) == type(other) \
+            and self.contained.isAssignableFrom(other.contained)
+
+    def __eq__(self, other):
+        return type(self) == type(other) and self.contained == other.contained
+
+class ARRAY(Container):
+    def __str__(self):
+        return f"[{self.contained}]"
     
-    def __eq__(self, other):
-        return super().__eq__(other) and self.type == other.type
+    def printInstance(self, value) -> str:
+        return f"[{', '.join(self.contained.printInstance(v) for v in value)}]"
 
-class LIST(Type):
-    def __init__(self,type):
-        self.type = type
+class LIST(Container):
     def __str__(self):
-        return f"List <{str(self.type)}>"
-    def __eq__(self, other):
-        return super().__eq__(other) and self.type == other.type
+        return f"<{self.contained}>"
+    
+    def printInstance(self, value) -> str:
+        return f"<{', '.join(self.contained.printInstance(v) for v in value)}>"
