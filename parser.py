@@ -31,10 +31,10 @@ lark_parser = r"""
     list_type: "<" type ">"
     type: PRIMITIVE | tuple_type | array_type | list_type
 
-    _sequence: (expression ",")* expression?
+    _sequence: (expression ",")* expression
 
     constant: INT | CHAR | STRING
-    tuple: "(" (expression ",")+ expression? ")"
+    tuple: "(" (expression ",")+ expression ")"
     array: "[" _sequence "]" | type "[" INT "]"
     list: "<" (_sequence | (expression ",")* expression ":" expression) ">"
 
@@ -48,26 +48,26 @@ lark_parser = r"""
     OP7: "~" | "!" | "#"
     OP8: /#\d+/
 
-    _exp0: _exp1 | or
-    or: _exp0 OP0 _exp1
-    _exp1: _exp2 | and
-    and: _exp1 OP1 _exp2
-    _exp2: _exp3 | equality
-    equality: _exp2 OP2 _exp3
-    _exp3: _exp4 | comparison
-    comparison: _exp3 OP3 _exp4
-    _exp4: _exp5 | sum
-    sum: _exp4 OP4 _exp5
-    _exp5: _exp6 | multiplication
-    multiplication: _exp5 OP5 _exp6
-    _exp6: _exp7 | exponentiation
-    exponentiation: _exp7 OP6 _exp6
-    _exp7: _exp8 | manipulation
-    manipulation:  OP7 _exp7
-    _exp8: _exp9 | element
-    element: _exp8 OP8
-    _exp9: _exp_base | indexation
-    indexation: _exp9 "[" expression "]"
+    _exp0: _exp1 | op_or
+    op_or: _exp0 OP0 _exp1
+    _exp1: _exp2 | op_and
+    op_and: _exp1 OP1 _exp2
+    _exp2: _exp3 | op_equality
+    op_equality: _exp2 OP2 _exp3
+    _exp3: _exp4 | op_comparison
+    op_comparison: _exp3 OP3 _exp4
+    _exp4: _exp5 | op_sum
+    op_sum: _exp4 OP4 _exp5
+    _exp5: _exp6 | op_multiplication
+    op_multiplication: _exp5 OP5 _exp6
+    _exp6: _exp7 | op_exponentiation
+    op_exponentiation: _exp7 OP6 _exp6
+    _exp7: _exp8 | op_manipulation
+    op_manipulation:  OP7 _exp7
+    _exp8: _exp9 | op_element
+    op_element: _exp8 OP8
+    _exp9: _exp_base | op_indexation
+    op_indexation: _exp9 "[" expression "]"
 
     _exp_base: constant
         | IDENTIFIER
@@ -109,7 +109,7 @@ input = """
 """
 
 
-p = Lark(lark_parser,start="type") # cria um objeto parser
+p = Lark(lark_parser,start="expression") # cria um objeto parser
 tree = p.parse(input)  # retorna uma tree
 linguagem = T().transform(tree)
 print(linguagem)

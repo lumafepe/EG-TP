@@ -1,9 +1,7 @@
 from abc import ABC, abstractmethod
-from .value import Value
-
 class Type(ABC):
     
-    def isInstanceOf(self,value:Value):
+    def isInstanceOf(self,value):
         return value.getType() == self
     
     @abstractmethod
