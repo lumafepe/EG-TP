@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from .context import Context, Kind
 from .issue import Issue, IssueType
-from .types import Type,BOOL,INT,LIST,ARRAY,TUPLE,CHAR,STRING
+from .types import Type,BOOL,INT,LIST,ARRAY,TUPLE,CHAR,STRING,Container
 from typing import List
 from enum import Enum
 import re
@@ -105,116 +105,50 @@ class BinaryOperation(Operation):
 
 
 
+class ArrayIndex(Expression):
+    def __init__(self, array: Expression, index: Expression) -> None:
+        self.array = array
+        self.index = index
 
-
-
-
-
-"""
-
-# class syntax
-
-class Operation_Type(Enum):
-    OR = '||'
-    AND = '&&'
-    EQUALITY = '=='
-    INEQUALITY = '!='
-    GT = '>'
-    GTE = '>='
-    LT = '<'
-    LTE = '<='
-    ADDITION = '+'
-    SUBTRACTION = '-'
-    MULTIPLICATION = '*'
-    DIVISION = '/'
-    MODULO = '%' 
-    EXPONENTIATION = '^'
-    BITWISE_NOT = '~'
-    NOT = '!'
-    HASHTAG = '#' #TODO Change
-    INDEXATION = '#[]' #TODO Change
-    ELEMENT = '##'
-
-class Operation(Expression):
-    is_element = re.compile(r"#\d+")
+    def kind(self) -> Kind:
+        return Kind.Variable
     
-    def __init__(self,opType:str,exps:list[Element]):
-        if re.match(self.is_element,opType):
-            self.opType = Operation_Type('##')
-            self.exps = exps
-            self.exps.append(Const(int(opType[1:]),INT()))
-        else:
-            self.opType = Operation_Type(opType)
-            self.exps = exps
+    def type(self) -> Type:
+        return self.array.type().contained
     
-    def __eq__(self, obj) -> bool:
-        return self.__class__ == obj.__class__ and self.opType == obj.opType and len(self.exps)==len(obj.exps) and all(map(lambda x:x[0]==x[1],zip(self.exps,obj.exps)))
-    
-    def __str__(self):
-        if len(self.exps)==1:
-            return self.opType.value + ' ' + str(self.exps[0]) 
-        else:
-            match self.opType:
-                case Operation_Type.INDEXATION:
-                    return str(self.exps[0])+f'[{str(self.exps[1])}]'
-                case _:
-                    return str(self.exps[0]) + f' {self.opType.value} ' + str(self.exps[1])
-                
-    def validate(self, context) -> iter[Issue]:
-        errors=[]
-        for exp in self.exps:
-            exp.validate(context)
-        if len(self.exps)==1:
-            pass
-        else: #TODO
-            pass
-            
-    
-    def returnType(self) -> Type:
-        match self.opType:
-            case Operation_Type.OR:
-                return BOOL()
-            case Operation_Type.AND:
-                return BOOL()
-            case Operation_Type.EQUALITY:
-                return BOOL()
-            case Operation_Type.INEQUALITY:
-                return BOOL()
-            case Operation_Type.GT:
-                return BOOL()
-            case Operation_Type.GTE:
-                return BOOL()
-            case Operation_Type.LT:
-                return BOOL()
-            case Operation_Type.LTE:
-                return BOOL()
-            case Operation_Type.NOT:
-                return BOOL()
-            case Operation_Type.ADDITION:
-                return self.exps[0].returnType()
-            case Operation_Type.SUBTRACTION:
-                return self.exps[0].returnType()
-            case Operation_Type.MULTIPLICATION:
-                return self.exps[0].returnType()
-            case Operation_Type.DIVISION:
-                return self.exps[0].returnType()
-            case Operation_Type.MODULO:
-                return self.exps[0].returnType()
-            case Operation_Type.EXPONENTIATION:
-                return self.exps[0].returnType()
-            case Operation_Type.BITWISE_NOT:
-                return self.exps[0].returnType()
-            case Operation_Type.HASHTAG:
-                return self.exps[0].returnType()
-            case Operation_Type.INDEXATION: #TODO FIX THIS
-                return self.exps[0].returnType()
-            case Operation_Type.ELEMENT: #TODO FIX THIS
-                typ = self.exps[0].returnType()
-                if typ.__class__ == LIST().__class__ :
-                    return typ.type
-                elif typ.__class__ == ARRAY().__class__ :
-                    return typ.type
-                elif typ.__class__ == TUPLE().__class__:
-                    return self.types[self.exps[1].value]
+    def validate(self, context: Context) -> iter[Issue]:
+        yield from self.array.validate()
+        yield from self.index.validate()
+        if type(self.array.type()) != ARRAY:
+            yield Issue(IssueType.Error, self.array, "TypeError: TODO msg fixe")  
+        if type(self.index.type()) != INT:
+            yield Issue(IssueType.Error, self.index, "TypeError: TODO msg fixe")
 
-"""
+    def __eq__(self, obj: object) -> bool:
+        return type(self) == type(obj) and self.array == obj.array and self.index == obj.index
+    
+    def __str__(self) -> str:
+        return f"{self.array}[{self.index}]"
+    
+
+class TupleIndex(Expression):
+    def __init__(self, tuple: Expression, index: int) -> None:
+        self.tuple = tuple
+        self.index = index
+
+    def kind(self) -> Kind:
+        return Kind.Variable
+    
+    def type(self) -> Type:
+        return self.tuple.type().tupled[self.index]
+
+    def validate(self, context: Context) -> iter[Issue]:
+        yield from self.tuple.validate()
+        if type(self.tuple.type()) != TUPLE:
+            yield Issue(IssueType.Error, self.tuple, "TypeError: TODO msg fixe")  
+
+    def __eq__(self, obj: object) -> bool:
+        return type(self) == type(obj) and self.tuple == obj.tuple and self.index == obj.index
+    
+    def __str__(self) -> str:
+        return f"{self.tuple}#{self.index}"
