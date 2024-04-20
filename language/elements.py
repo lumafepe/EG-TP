@@ -1,13 +1,8 @@
 from abc import ABC, abstractmethod
 from .context import Context, Kind
 from .issue import Issue, IssueType
-<<<<<<< HEAD
 from .types import Type,BOOL,INT,LIST,ARRAY,TUPLE,CHAR,STRING
 from typing import Iterator
-=======
-from .types import Type,BOOL,INT,LIST,ARRAY,TUPLE,CHAR,STRING,Container
-from typing import List
->>>>>>> e4130a804bf48bbadabca1b3b749f3dce9363a0b
 from enum import Enum
 import re
 
@@ -53,6 +48,25 @@ class Value(Expression):
 
     def __str__(self) -> str:
         return self.type.printInstance(self.value)
+
+class Tuple(Expression):
+    def __init__(self, operator: str, operands: list[Expression], allowedTypes: list[Type]) -> None:
+        pass
+
+    def kind(self) -> Kind:
+        pass
+
+    def validate(self, context: Context) -> Iterator[Issue]:
+        pass
+
+    def __eq__(self, obj: object) -> bool:
+        pass
+    
+    def __str__(self) -> str:
+        pass
+    def type(self) -> Type:
+        return super().type()
+
 
 
 #Assumes all operands are of the same type, or are assignable to the same type
