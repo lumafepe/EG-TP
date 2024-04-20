@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from .context import Context
 from .issue import Issue
-from .types import Type,BOOL,INT
+from .types import Type,BOOL,INT,LIST,ARRAY,TUPLE,CHAR,STRING
 from typing import List
 from enum import Enum
 import re
@@ -89,7 +89,14 @@ class Operation(Element):
                     return str(self.exps[0]) + f' {self.opType.value} ' + str(self.exps[1])
                 
     def validate(self, context) -> List[Issue]:
-        pass
+        errors=[]
+        for exp in self.exps:
+            exp.validate(context)
+        if len(self.exps)==1:
+            pass
+        else: #TODO
+            pass
+            
     
     def returnType(self) -> Type:
         match self.opType:
@@ -129,4 +136,13 @@ class Operation(Element):
                 return self.exps[0].returnType()
             case Operation_Type.INDEXATION: #TODO FIX THIS
                 return self.exps[0].returnType()
+            case Operation_Type.ELEMENT: #TODO FIX THIS
+                typ = self.exps[0].returnType()
+                if typ.__class__ == LIST().__class__ :
+                    return typ.type
+                elif typ.__class__ == ARRAY().__class__ :
+                    return typ.type
+                elif typ.__class__ == TUPLE().__class__:
+                    return self.types[self.exps[1].value]
+                     
 

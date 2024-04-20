@@ -31,9 +31,6 @@ class T(Transformer):
     def type(self,token):
         return token[0]
     
-    def _sequence(self,token):
-        return token #TODO
-    
     def constant(self,token):
         return token[0]
     def tuple(self,token):
@@ -82,34 +79,26 @@ class T(Transformer):
         return elements.Operation('#'+token[1],[token[0]])
     def op_indexation(self,token):
         return elements.Operation('#[]',[token[0],token[1]])
-    
-    def _exp0(self,token):
-        return token
-    def _exp1(self,token):
-        return token
-    def _exp2(self,token):
-        return token
-    def _exp3(self,token):
-        return token
-    def _exp4(self,token):
-        return token
-    def _exp5(self,token):
-        return token
-    def _exp6(self,token):
-        return token
-    def _exp7(self,token):
-        return token
-    def _exp8(self,token):
-        return token
-    def _exp9(self,token):
-        return token
-    
-    def _exp_base(self,token):
-        return token
+
     
     def expression(self,token):
         return token[0]
     
+    def KIND(self,token):
+        return token
+    def declaration(self,token):
+        return token #TODO
+    def assignment(self,token): 
+        return token #TODO
+    def decl_ass(self,token): 
+        return token #TODO
+
+    def scope(self,token):
+        return token #TODO
+    def condition(self,token):
+        return token #TODO
+        
+        
         
     
     
