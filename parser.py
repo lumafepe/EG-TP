@@ -1,15 +1,6 @@
-# Grupo 5
-# ------------------------------------------------------------
-# TPC2 : Gramática (definição sintática)
-#  + Linguagem imperativa
-#  + funções
-#  + expressões de controlo
-#  + estruturas de dados simples
-# ------------------------------------------------------------
-
 from lark import Lark
 import sys
-
+from transformer import T
 
 #const_tuple: "(" ( (constant ",")+ constant? | constant "," | ) ")"
 #const_array: "[" (constant ",")* constant? "]"
@@ -28,14 +19,14 @@ import sys
 0  ||
 """
 
-parser = Lark(r"""
+lark_parser = r"""
     PRIMITIVE.1: "int" | "string" | "char" | "bool"
     IDENTIFIER: /[A-Za-z_]\w*/
     INT: /-?\d+/
     CHAR: /'([^\b\t\n\r']|\\[\\0btnr'])'/
     STRING: /"([^\b\t\n\r"]|\\[\\0btnr"])*"/
 
-    tuple_type: "(" (type ",")+ type? ")"
+    tuple_type: "(" (type ",")+ type ")"
     array_type: "[" type "]"
     list_type: "<" type ">"
     type: PRIMITIVE | tuple_type | array_type | list_type
@@ -111,8 +102,14 @@ parser = Lark(r"""
     %ignore C_COMMENT
     %ignore CPP_COMMENT
 
-""",start="program")
+"""
 
 
-p=parser.parse(sys.stdin.read())
-print(p.pretty())
+input = """
+"""
+
+
+p = Lark(lark_parser,start="type") # cria um objeto parser
+tree = p.parse(input)  # retorna uma tree
+linguagem = T().transform(tree)
+print(linguagem)

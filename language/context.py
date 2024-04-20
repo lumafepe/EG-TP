@@ -1,19 +1,3 @@
-from abc import ABC, abstractmethod
-
-class Type(ABC):
-    
-    @abstractmethod
-    def isInstanceOf(self,type):
-        pass
-    
-    @abstractmethod
-    def __str__(self):
-        pass
-    
-    @abstractmethod
-    def __eq__(self,type):
-        pass
-    
 
 class Context():
     def __init__(self,parent=None):
