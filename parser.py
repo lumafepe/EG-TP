@@ -26,15 +26,15 @@ lark_parser = r"""
     CHAR: /'([^\b\t\n\r']|\\[\\0btnr'])'/
     STRING: /"([^\b\t\n\r"]|\\[\\0btnr"])*"/
 
-    tuple_type: "(" (type ",")+ type ")"
+    tuple_type: "(" (type ",")+ type? ")"
     array_type: "[" type "]"
     list_type: "<" type ">"
     type: PRIMITIVE | tuple_type | array_type | list_type
 
-    _sequence: (expression ",")* expression
+    _sequence: (expression ",")* expression?
 
     constant: INT | CHAR | STRING
-    tuple: "(" (expression ",")+ expression ")"
+    tuple: "(" (expression ",")+ expression? ")"
     array: "[" _sequence "]" | type "[" INT "]"
     list: "<" (_sequence | (expression ",")* expression ":" expression) ">"
 
@@ -86,16 +86,16 @@ lark_parser = r"""
     scope: "{" program "}"
     condition: "(" expression ")"
 
-    if: "if" condition scope ("elif" condition scope)* ("else" scope)?
-    while: "while" condition scope
+    if_cond: "if" condition scope ("elif" condition scope)* ("else" scope)?
+    while_cond: "while" condition scope
     do_while: "do" scope "while" condition ";"
 
     function: "func" IDENTIFIER "(" params ")" (":" type)? scope
     params: ((IDENTIFIER ":" type ",")* IDENTIFIER ":" type)?
     function_call: IDENTIFIER "(" _sequence ")"
-    return: "return" expression
+    func_return: "return" expression
 
-    program: (declaration ";" | assignment ";" | decl_ass ";" | function_call ";" | return ";" | if | while | do_while | function)*
+    program: (declaration ";" | assignment ";" | decl_ass ";" | function_call ";" | func_return ";" | if_cond | while_cond | do_while | function)*
 
     %import common (WS, C_COMMENT, CPP_COMMENT)
     %ignore WS
@@ -109,7 +109,7 @@ input = """
 """
 
 
-p = Lark(lark_parser,start="expression") # cria um objeto parser
+p = Lark(lark_parser,start="program") # cria um objeto parser
 tree = p.parse(input)  # retorna uma tree
 linguagem = T().transform(tree)
 print(linguagem)
