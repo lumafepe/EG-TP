@@ -220,5 +220,5 @@ class T(Transformer):
         return control.Return(token[0])
 
     def program(self, token):
-        self.counter['main_instructions'] += 1
+        self.counter['instructions'] += 1
         return control.Program(token)

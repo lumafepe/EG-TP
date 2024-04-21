@@ -47,9 +47,8 @@ class Declaration(Element):
     def __str__(self) -> str:
         return f"{'const' if self.const else 'var'} {self.variable}{f': {self.valueType}' if self.valueType != None else ''}{f' = {self.value}' if self.value !=None else ''}"
     
-    def _toHTML(self, errors) -> str:
-        s=""
-        s += f"""<span class="control">{'const' if self.const else 'var'} </span>"""
+    def _toHTML(self, errors, depth=0) -> str:
+        s = f"""<span class="control">{'const' if self.const else 'var'} </span>"""
         s += f"""<span class="variable">{self.variable}</span>"""
         if self.valueType:
             s += f"""<span class="operator"> : </span>"""
@@ -85,7 +84,7 @@ class Assignment(Element):
     def __str__(self) -> str:
         return f"{str(self.dest)} = {str(self.value)}"
     
-    def _toHTML(self, errors) -> str:
+    def _toHTML(self, errors, depth=0) -> str:
         s = self.dest.toHTML(errors)
         s += f"""<span class="operator"> = </span>"""
         s += self.value.toHTML(errors)
@@ -112,9 +111,9 @@ class Program(Element):
         semicolon = lambda x: '' if any(isinstance(x,c) for c in [If,While,Function,Do_while]) else ';'
         return '\n'.join((str(o) + semicolon(o)) for o in self.instructions)
     
-    def _toHTML(self, errors) -> str:
+    def _toHTML(self, errors, depth=0) -> str:
         semicolon = lambda x: '' if any(isinstance(x,c) for c in [If,While,Function,Do_while]) else '<span class="operator">;</span>'
-        return '\n'.join((o.toHTML(errors) + semicolon(o)) for o in self.instructions)
+        return '<br>'.join((o.toHTML(errors,depth) + semicolon(o)) for o in self.instructions)
     
     def isIf(self) -> bool:
         return len(self.instructions)==1 and type(self.instructions[0]) == If
@@ -143,6 +142,8 @@ class Function(Element):
 
         yield from self.body.validate(subcontext)
         context.declare_function(self)
+        if subcontext.maxLoops > context.maxLoops:
+            context.set_maxLoops(subcontext.maxLoops)
 
     def __eq__(self, obj) -> bool:
         return type(self) == type(obj) \
@@ -155,15 +156,18 @@ class Function(Element):
     def __str__(self) -> str:
         return f"func {self.name}({', '.join(f'{arg}: {type}' for arg,type in self.args)}): {self.returnType} {{\n{self.body}\n}}"
     
-    def _toHTML(self, errors) -> str:
-        s=f"""<span class="control">func </span>"""
+    def _toHTML(self, errors, depth=0) -> str:
+        s=f"""<span class="line" index={depth}></span><span class="control">func </span>"""
         args = f"""<span class="encloser">({'<span class="operator">, </span>'.join(f'<span class="operator"><span class="variable">{arg}</span> : {type.toHTML(errors)}</span>' for arg,type in self.args)})</span>"""
         s += f"""<span class="function">{self.name}{args}</span>"""
         if self.returnType:
             s += f"""<span class="operator"> : </span>"""
             s += self.returnType.toHTML(errors)
-        s += f"""<span class="scope"><br>{{<br>{self.body.toHTML(errors)}<br>}}</span>"""
+        s += f"""<span class="line" index={depth}></span><span class="scope"> {{
+<br>{self.body.toHTML(errors,depth+1)}
+<br><span class="line" index={depth}></span>}}</span>"""
         return s
+    
 
 class Return(Element):
     def __init__(self, exp: Expression) -> None:
@@ -181,8 +185,8 @@ class Return(Element):
     def __str__(self) -> str:
         return f"return {str(self.value)}"
     
-    def _toHTML(self, errors) -> str:
-        s=f"""<span class="line"><span class="control">return {self.value.toHTML(errors)}</span></span>"""
+    def _toHTML(self, errors, depth=0) -> str:
+        s=f"""<span class="line" index={depth}></span><span class="control">return {self.value.toHTML(errors)}</span>"""
         return s
     
     def __eq__(self, obj) -> bool:
@@ -209,6 +213,9 @@ class If(Element):
         if self.elseScope:
             elseContext = Context(context,context.get_returnType())
             yield from self.elseScope.validate(elseContext)
+        
+        if self.ifScope.isIf() and not self.ifScope.instructions[0].hasElse():
+            yield Issue(IssueType.Info,self.ifScope,"Condition can be joint with top if")
     
     def __eq__(self, obj) -> bool:
         return type(self) == type(obj) \
@@ -235,19 +242,23 @@ class If(Element):
 }}"""
         return s
     
-    def _toHTML(self, errors) -> str:
-        s=f"""<span class="line"><span class="control">if </span>"""
-        s += f"""<span class="encloser">({self.condition.toHTML(errors)}) </span></span>"""
-        s += f"""<span class="scope"><br>{{<br>{self.ifScope.toHTML(errors)}<br>}}</span>"""
+    def _toHTML(self, errors, depth=0) -> str:
+        s=f"""<span class="line" index={depth}></span><span class="control">if </span>"""
+        s += f"""<span class="encloser">({self.condition.toHTML(errors)}) </span>"""
+        s += f"""<span class="scope"> {{
+<br>{self.ifScope.toHTML(errors,depth+1)}
+<br><span class="line" index={depth}></span>}}</span>"""
         if self.hasElse():
             if self.elseScope.isIf():
-                s+=f"""<span class="control">elif</span>{self.elseScope.toHTML(errors)}"""
+                s+=f"""<span class="control">elif</span>{self.elseScope.toHTML(errors,depth)}"""
             else:
-                s+=f"""<span class="control">else </span>"""
-                s+=f"""<span class="scope"><br>{{<br>{self.ifScope.toHTML(errors)}}}</span>"""
-        s = s.replace("""<span class="control">elif</span><span class="line"><span class="control">if </span>""",
-                      """<span class="line"><span class="control">elif</span>"""
-                      )
+                s+=f"""<span class="control"> else</span>"""
+                s+=f"""<span class="scope"> {{
+<br>{self.ifScope.toHTML(errors,depth+1)}
+<br><span class="line" index={depth}></span>}}</span>"""
+
+        s = s.replace(f"""<span class="control">elif</span><span class="line" index={depth}></span><span class="control">if </span>""",
+                     """<span class="control"> elif </span>""")
         return s
 
 class While(Element):
@@ -263,6 +274,9 @@ class While(Element):
         
         scopeContext = Context(context,context.get_returnType())
         yield from self.scope.validate(scopeContext)
+        
+        if scopeContext.maxLoops + 1 > context.maxLoops:
+            context.set_maxLoops(scopeContext.maxLoops + 1)
     
     def __eq__(self, obj) -> bool:
         return type(self) == type(obj) \
@@ -275,10 +289,12 @@ class While(Element):
 while ({str(self.condition)}) {{
     {str(self.scope)}
 }}"""
-    def _toHTML(self, errors) -> str:
-        s=f"""<span class="line"><span class="control">while </span>"""
-        s += f"""<span class="encloser">({self.condition.toHTML(errors)}) </span></span>"""
-        s += f"""<span class="scope"><br>{{<br>{self.scope.toHTML(errors)}<br>}}</span>"""
+    def _toHTML(self, errors, depth=0) -> str:
+        s=f"""<span class="line" index={depth}></span><span class="control">while </span>"""
+        s += f"""<span class="encloser">({self.condition.toHTML(errors)}) </span>"""
+        s += f"""<span class="scope"> {{
+{self.scope.toHTML(errors,depth+1)}
+<span class="line" index={depth}></span>}}</span>"""
         return s
             
 class Do_while(Element):
@@ -294,6 +310,9 @@ class Do_while(Element):
         
         scopeContext = Context(context,context.get_returnType())
         yield from self.scope.validate(scopeContext)
+        
+        if scopeContext.maxLoops + 1 > context.maxLoops:
+            context.set_maxLoops(scopeContext.maxLoops + 1)
     
     def __eq__(self, obj) -> bool:
         return type(self) == type(obj) \
@@ -307,9 +326,11 @@ do {{
     {str(self.scope)}
 }} while ({str(self.condition)})"""
 
-    def _toHTML(self, errors) -> str:
-        s = f"""<span class="line"><span class="control">do </span></span>"""
-        s += f"""<span class="scope"><br>{{<br>{self.scope.toHTML(errors)}<br>}}</span>"""
+    def _toHTML(self, errors, depth=0) -> str:
+        s = f"""<span class="line" index={depth}></span><span class="control">do </span>"""
+        s += f"""<span class="scope"> {{
+{self.scope.toHTML(errors,depth+1)}
+<span class="line" index={depth}></span>}}</span>"""
         s += f"""<span class="line"><span class="control">while </span>"""
         s += f"""<span class="encloser">({self.condition.toHTML(errors)}) </span></span>"""
         return s

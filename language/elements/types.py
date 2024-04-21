@@ -42,7 +42,7 @@ class Primitive(Type):
     def __eq__(self, other):
         return type(self) == type(other)
     
-    def _toHTML(self, errors) -> str:
+    def _toHTML(self, errors, depth=0) -> str:
         s = f"""<span class="type">{str(self)}</span>"""
         return s
 
@@ -134,7 +134,7 @@ class TUPLE(Type):
     def __str__(self):
         return f"({', '.join(self.tupled)})"
 
-    def _toHTML(self, errors) -> str:
+    def _toHTML(self, errors, depth=0) -> str:
         return f"""<span class="encloser">({'<span class="operator">, </span>'.join(tip.toHTML(errors) for tip in self.tupled)})</span>"""
 
 class Container(Type):
@@ -161,7 +161,7 @@ class ARRAY(Container):
         return f"""<span class="encloser">[{'<span class="operator">, </span>'.join(self.contained.toHTMLInstance(v) for v in value)}]</span>"""
 
     
-    def _toHTML(self, errors) -> str:
+    def _toHTML(self, errors, depth=0) -> str:
         return f"""<span class="encloser">[{self.contained.toHTML(errors)}]"""
     
     
@@ -177,5 +177,5 @@ class LIST(Container):
         return f"""<span class="encloser"><{'<span class="operator">, </span>'.join(self.contained.toHTMLInstance(v) for v in value)}></span>"""
 
     
-    def _toHTML(self, errors) -> str:
+    def _toHTML(self, errors, depth=0) -> str:
         return f"""<span class="encloser"><{self.contained.toHTML(errors)}>"""

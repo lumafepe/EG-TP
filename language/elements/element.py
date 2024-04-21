@@ -2,7 +2,6 @@ from abc import ABC, abstractmethod
 from ..context import Context
 from ..issue import Issue,IssueType
 from typing import Iterator
-from uuid import uuid4
 
 class Element(ABC):
     last_id = 0
@@ -31,16 +30,16 @@ class Element(ABC):
         pass
     
     @abstractmethod
-    def _toHTML(self, errors) -> str:
+    def _toHTML(self, errors, depth=0) -> str:
         pass
     
-    def toHTML(self,errors) -> str :
+    def toHTML(self,errors, depth=0) -> str :
         if self.id in errors:
             objErrors = errors[self.id]
             
             for typ,clas in [(IssueType.Error,"error"),(IssueType.Warning,"warning"),(IssueType.Info,"sugestion")]:
                 for error in objErrors:
                     if error.valueType == typ:
-                        return f"""<span class="{clas}" message="{error.msg}">{self._toHTML(errors)}</span>"""
-        else: return self._toHTML(errors)
+                        return f"""<span class="{clas}" message="{error.msg}">{self._toHTML(errors,depth)}</span>"""
+        else: return self._toHTML(errors,depth)
         

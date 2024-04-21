@@ -112,7 +112,7 @@ lark_parser = r"""
 input = """
 func ola(i:int,o:char) : int {
     if (i == o) {
-        return 2;
+        if (o >= i ){ return 7;}
     } elif (i<o){
         return 3;
     } else{
@@ -120,19 +120,27 @@ func ola(i:int,o:char) : int {
     }
 }
 
+
 var a : int = ola("a",'a');
 """
 
 
 p = Lark(lark_parser,start="program") # cria um objeto parser
 tree = p.parse(input)  # retorna uma tree
-linguagem = T().transform(tree)
-a=linguagem.validate(Context())
+transformer = T()
+linguagem = transformer.transform(tree)
+c = Context()
 
 errors = defaultdict(set)
-for i in a:
-    print(i)
+for i in linguagem.validate(c):
     errors[i.elem.id].add(i)
+
+maxDepth = c.maxLoops
+counters = transformer.counter
+main_instructions = len(linguagem.instructions)
+
+print(maxDepth)
+print(counters)
 
 
 with open('a.html') as f:

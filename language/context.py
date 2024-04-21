@@ -7,9 +7,13 @@ class Context():
         self.usedVariables = Counter()
         self.usedFunctions = Counter()
         self.returnType = returnType
+        self.maxLoops = 0
 
     def in_global_scope(self) -> bool:
         return self.parent is None
+
+    def set_maxLoops(self,value):
+        self.maxLoops = value
 
     def used_variables(self) -> Counter:
         return self.usedVariables
