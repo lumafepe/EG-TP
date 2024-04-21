@@ -1,23 +1,17 @@
 from abc import ABC, abstractmethod
-from .context import Context, Kind
-from .issue import Issue, IssueType
 from .types import Type,BOOL,INT,LIST,ARRAY,TUPLE,CHAR,STRING
 from typing import Iterator
 from enum import Enum
-import re
+from .element import Element
+from .types import Type, INT, BOOL, CHAR, STRING, TUPLE, ARRAY, LIST
+from ..context import Context
+from ..issue import Issue, IssueType
+from typing import Iterator
 
-class Element(ABC):
-    @abstractmethod
-    def validate(self, context: Context) -> Iterator[Issue]:
-        pass
-
-    @abstractmethod
-    def __eq__(self, obj) -> bool:
-        pass
-    
-    @abstractmethod
-    def __str__(self) -> str:
-        pass
+class Kind(Enum):
+    Constant = 0
+    Variable = 1
+    Literal = 2
 
 class Expression(Element):
     @abstractmethod
@@ -27,6 +21,7 @@ class Expression(Element):
     @abstractmethod
     def type(self) -> Type:
         pass
+
 
 class Value(Expression):
     def __init__(self,value,valueType:Type):

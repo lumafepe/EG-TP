@@ -1,6 +1,7 @@
 from lark import Transformer
 
-from language import types,elements
+from language.elements import types, expressions
+
 from collections import Counter
 
 class T(Transformer):
@@ -23,11 +24,11 @@ class T(Transformer):
         return str(token)
     def INT(self,token):
         print(token)
-        return elements.Value(int(token),types.INT())
+        return expressions.Value(int(token),types.INT())
     def CHAR(self,token):
-        return elements.Value(token,types.CHAR())
+        return expressions.Value(token,types.CHAR())
     def STRING(self,token):
-        return elements.Value(token,types.STRING())
+        return expressions.Value(token,types.STRING())
     
     def tuple_type(self,token):
         return types.TUPLE(token)
@@ -67,53 +68,53 @@ class T(Transformer):
         return token
     
     def op_or(self,token):
-        return elements.Or(token[0],token[2])
+        return expressions.Or(token[0],token[2])
     def op_and(self,token):
-        return elements.And(token[0],token[2])
+        return expressions.And(token[0],token[2])
     def op_equality(self,token):
         match token[1]:
             case '!=':
-                return elements.Inequality(token[0],token[2])
+                return expressions.Inequality(token[0],token[2])
             case '==':
-                return elements.Equality(token[0],token[2])
+                return expressions.Equality(token[0],token[2])
     def op_comparison(self,token):
         match token[1]:
             case '<':
-                return elements.Lt(token[0],token[2])
+                return expressions.Lt(token[0],token[2])
             case '<=':
-                return elements.Lte(token[0],token[2])
+                return expressions.Lte(token[0],token[2])
             case '>':
-                return elements.Gt(token[0],token[2])
+                return expressions.Gt(token[0],token[2])
             case '>=':
-                return elements.Gte(token[0],token[2])
+                return expressions.Gte(token[0],token[2])
     def op_sum(self,token):
         match token[1]:
             case '-':
-                return elements.Subtraction(token[0],token[2])
+                return expressions.Subtraction(token[0],token[2])
             case '+':
-                return elements.Addition(token[0],token[2])
+                return expressions.Addition(token[0],token[2])
     def op_multiplication(self,token):
         match token[1]:
             case '*':
-                return elements.Multiplication(token[0],token[2])
+                return expressions.Multiplication(token[0],token[2])
             case '/':
-                return elements.Division(token[0],token[2])
+                return expressions.Division(token[0],token[2])
             case '%':
-                return elements.Modulo(token[0],token[2])
+                return expressions.Modulo(token[0],token[2])
     def op_exponentiation(self,token):
-        return elements.Expotentiation(token[0],token[2])
+        return expressions.Expotentiation(token[0],token[2])
     def op_manipulation(self,token):
         match token[0]:
             case '~':
-                return elements.BitwiseNot(token[1])
+                return expressions.BitwiseNot(token[1])
             case '!':
-                return elements.Not(token[1])
+                return expressions.Not(token[1])
             case '#':
-                return elements.Length(token[1])
+                return expressions.Length(token[1])
     def op_element(self,token):
-        return elements.Or(token[0],token[2])#TODO
+        return expressions.Or(token[0],token[2])#TODO
     def op_indexation(self,token):
-        return elements.Or(token[0],token[2])#TODO
+        return expressions.Or(token[0],token[2])#TODO
 
     
     def expression(self,token):
