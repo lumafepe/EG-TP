@@ -23,7 +23,6 @@ class T(Transformer):
     def IDENTIFIER(self,token):
         return str(token)
     def INT(self,token):
-        print(token)
         return expressions.Value(int(token),types.INT())
     def CHAR(self,token):
         return expressions.Value(token,types.CHAR())

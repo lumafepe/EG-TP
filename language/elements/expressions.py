@@ -19,7 +19,7 @@ class Expression(Element):
         pass
 
     @abstractmethod
-    def type(self) -> Type:
+    def type(self,context : Context) -> Type:
         pass
 
 
@@ -32,7 +32,7 @@ class Value(Expression):
     def kind(self) -> Kind:
         return Kind.Constant
     
-    def type(self) -> Type:
+    def type(self,context : Context) -> Type:
         return self.type
 
     def validate(self, context: Context) -> Iterator[Issue]:
@@ -69,12 +69,12 @@ class MultiValueExpression(Expression):
 
 
 class UniTypeMultiValueExpression(MultiValueExpression):
-    def getBiggerType(self):
-        bigger_type = self.values[0].type()
+    def getBiggerType(self,context):
+        bigger_type = self.values[0].type(context)
         for o in self.values:
-            if not bigger_type.isAssignableFrom(o.type()):
-                if o.type().isAssignableFrom(bigger_type):
-                    bigger_type = o.type()
+            if not bigger_type.isAssignableFrom(o.type(context)):
+                if o.type(context).isAssignableFrom(bigger_type):
+                    bigger_type = o.type(context)
         return bigger_type
 
 class Tuple(MultiValueExpression):
@@ -87,8 +87,8 @@ class Tuple(MultiValueExpression):
             yield Issue(IssueType.Error,self, "TypeError. TODO: make cool messages")
         
 
-    def type(self) -> Type:
-        return TUPLE([t.type() for t in self.values])
+    def type(self,context : Context) -> Type:
+        return TUPLE([t.type(context) for t in self.values])
 
 class Array(UniTypeMultiValueExpression):
     def __init__(self, values: list[Expression], stringOpener: str, stringCloser: str) -> None:
@@ -96,16 +96,16 @@ class Array(UniTypeMultiValueExpression):
 
     def validate(self, context: Context) -> Iterator[Issue]:
         yield from super().validate(context)
-        bigger_type = self.values[0].type()
+        bigger_type = self.values[0].type(context)
         for o in self.values:
-            if not bigger_type.isAssignableFrom(o.type()):
-                if o.type().isAssignableFrom(bigger_type):
-                    bigger_type = o.type()
+            if not bigger_type.isAssignableFrom(o.type(context)):
+                if o.type(context).isAssignableFrom(bigger_type):
+                    bigger_type = o.type(context)
                 else:
                     yield Issue(IssueType.Error,self, "TypeError. TODO: make cool messages")
 
-    def type(self) -> Type:
-        return ARRAY(self.getBiggerType())
+    def type(self,context : Context) -> Type:
+        return ARRAY(self.getBiggerType(context))
     
 class List(UniTypeMultiValueExpression):
     def __init__(self, values: list[Expression], stringOpener: str, stringCloser: str) -> None:
@@ -113,18 +113,36 @@ class List(UniTypeMultiValueExpression):
 
     def validate(self, context: Context) -> Iterator[Issue]:
         yield from super().validate(context)
-        bigger_type = self.values[0].type()
+        bigger_type = self.values[0].type(context)
         for o in self.values:
-            if not bigger_type.isAssignableFrom(o.type()):
-                if o.type().isAssignableFrom(bigger_type):
-                    bigger_type = o.type()
+            if not bigger_type.isAssignableFrom(o.type(context)):
+                if o.type(context).isAssignableFrom(bigger_type):
+                    bigger_type = o.type(context)
                 else:
                     yield Issue(IssueType.Error,self,"TypeError. TODO: make cool messages")
 
-    def type(self) -> Type:
-        return LIST(self.getBiggerType())
+    def type(self,context : Context) -> Type:
+        return LIST(self.getBiggerType(context))
 
 
+class Variable(Expression):
+    
+    def __init__(self,symbol) -> None:
+        self.symbol = symbol
+        
+    def kind(self):
+        return Kind.Variable
+    
+    def __eq__(self, obj: object) -> bool:
+        return type(self)== type(obj) and self.symbol == obj.symbol
+
+    def validate(self, context: Context) -> Iterator[Issue]:
+        if not context.is_declared(self.symbol):
+            yield Issue(IssueType.Error,self, "TypeError. Undefined Variable")
+        context.use_symbol(self.symbol)
+        
+    def __str__(self):
+        return self.symbol
 
 
 #Assumes all operands are of the same type, or are assignable to the same type
@@ -141,13 +159,13 @@ class Operation(Expression):
         for o in self.operands:
             yield from o.validate(context)
         
-        bigger_type = self.operands[0].type()
+        bigger_type = self.operands[0].type(context)
         for o in self.operands:
-            if not bigger_type.isAssignableFrom(o.type()):
-                if o.type().isAssignableFrom(bigger_type):
-                    bigger_type = o.type()
+            if not bigger_type.isAssignableFrom(o.type(context)):
+                if o.type(context).isAssignableFrom(bigger_type):
+                    bigger_type = o.type(context)
                 else:
-                    yield Issue(IssueType.Error, "TypeError. TODO: make cool messages")
+                    yield Issue(IssueType.Error,self, "TypeError. TODO: make cool messages")
 
     def __eq__(self, obj: object) -> bool:
         return type(self) == type(obj) \
@@ -179,42 +197,42 @@ class BinaryOperation(Operation):
         return f"{self.lterm()} {self.operator} {self.rterm()}"
 
 class BooleanBinaryOperation(BinaryOperation):
-    def type(self) -> Type:
+    def type(self,context : Context) -> Type:
         return BOOL()
 
 class Or(BooleanBinaryOperation):
     def __init__(self, lterm: Expression, rterm: Expression) -> None:
-        super().__init__('||', lterm, rterm, [BOOL()])
+        super().__init__('||', lterm, rterm, [BOOL])
 class And(BooleanBinaryOperation):
     def __init__(self, lterm: Expression, rterm: Expression) -> None:
-        super().__init__('&&', lterm, rterm, [BOOL()])
+        super().__init__('&&', lterm, rterm, [BOOL])
 
 class Equality(BooleanBinaryOperation):
     def __init__(self, lterm: Expression, rterm: Expression,) -> None:
-        super().__init__('==', lterm, rterm, [INT(),STRING(),CHAR(),BOOL(),TUPLE(),ARRAY(),LIST()])
+        super().__init__('==', lterm, rterm, [INT,STRING,CHAR,BOOL,TUPLE,ARRAY,LIST])
 
 class Inequality(BooleanBinaryOperation):
     def __init__(self, lterm: Expression, rterm: Expression,) -> None:
-        super().__init__('==', lterm, rterm, [INT(),STRING(),CHAR(),BOOL(),TUPLE(),ARRAY(),LIST()])
+        super().__init__('==', lterm, rterm, [INT,STRING,CHAR,BOOL,TUPLE,ARRAY,LIST])
 
 class Gt(BooleanBinaryOperation):
     def __init__(self, lterm: Expression, rterm: Expression) -> None:
-        super().__init__('>', lterm, rterm, [CHAR(),INT()])
+        super().__init__('>', lterm, rterm, [CHAR,INT])
 class Gte(BooleanBinaryOperation):
     def __init__(self, lterm: Expression, rterm: Expression) -> None:
-        super().__init__('>=', lterm, rterm, [CHAR(),INT()])
+        super().__init__('>=', lterm, rterm, [CHAR,INT])
 class Lt(BooleanBinaryOperation):
     def __init__(self, lterm: Expression, rterm: Expression) -> None:
-        super().__init__('<', lterm, rterm, [CHAR(),INT()])
+        super().__init__('<', lterm, rterm, [CHAR,INT])
 class Lte(BooleanBinaryOperation):
     def __init__(self, lterm: Expression, rterm: Expression) -> None:
-        super().__init__('<=', lterm, rterm, [CHAR(),INT()])
+        super().__init__('<=', lterm, rterm, [CHAR,INT])
 
 class NumericBinaryOperation(BinaryOperation):
     def __init__(self, operator: str, lterm: Expression, rterm: Expression) -> None:
-        super().__init__(operator, lterm, rterm, [INT(),CHAR()])
+        super().__init__(operator, lterm, rterm, [INT,CHAR])
         
-    def type(self) -> Type:
+    def type(self,context : Context) -> Type:
         if self.lterm.type == CHAR() and self.rterm.type == CHAR():
             return CHAR()
         else:
@@ -247,20 +265,20 @@ class Expotentiation(NumericBinaryOperation):
 
 class BitwiseNot(UnaryOperation):
     def __init__(self, operand: Expression) -> None:
-        super().__init__('~', operand,[INT(),CHAR()])
-    def type(self) -> Type:
-        return self.operand.type()
+        super().__init__('~', operand,[INT,CHAR])
+    def type(self,context : Context) -> Type:
+        return self.operand.type(context)
 
 class Not(UnaryOperation):
     def __init__(self, operand: Expression) -> None:
-        super().__init__('!', operand,[BOOL()])
-    def type(self) -> Type:
+        super().__init__('!', operand,[BOOL])
+    def type(self,context : Context) -> Type:
         return BOOL()
 
 class Length(BinaryOperation):
     def __init__(self, lterm: Expression, rterm: Expression) -> None:
-        super().__init__('#', lterm, rterm, [ARRAY()])
-    def type(self) -> Type:
+        super().__init__('#', lterm, rterm, [ARRAY])
+    def type(self,context : Context) -> Type:
         return INT()
 
 class ArrayIndex(Expression):
@@ -277,15 +295,15 @@ class ArrayIndex(Expression):
 
         return Kind.Literal
     
-    def type(self) -> Type:
-        return self.array.type().contained
+    def type(self,context : Context) -> Type:
+        return self.array.type(context).contained
     
-    def validate(self, context: Context) -> iter[Issue]:
+    def validate(self, context: Context) -> Iterator[Issue]:
         yield from self.array.validate()
         yield from self.index.validate()
-        if type(self.array.type()) != ARRAY:
+        if type(self.array.type(context)) != ARRAY:
             yield Issue(IssueType.Error, self.array, "TypeError: TODO msg fixe")  
-        if type(self.index.type()) != INT:
+        if type(self.index.type(context)) != INT:
             yield Issue(IssueType.Error, self.index, "TypeError: TODO msg fixe")
 
     def __eq__(self, obj: object) -> bool:
@@ -302,12 +320,12 @@ class TupleIndex(Expression):
     def kind(self) -> Kind:
         return self.tuple.kind()
     
-    def type(self) -> Type:
-        return self.tuple.type().tupled[self.index]
+    def type(self,context : Context) -> Type:
+        return self.tuple.type(context).tupled[self.index]
 
-    def validate(self, context: Context) -> iter[Issue]:
+    def validate(self, context: Context) -> Iterator[Issue]:
         yield from self.tuple.validate()
-        if type(self.tuple.type()) != TUPLE:
+        if type(self.tuple.type(context)) != TUPLE:
             yield Issue(IssueType.Error, self.tuple, "TypeError: TODO msg fixe")  
 
     def __eq__(self, obj: object) -> bool:

@@ -1,19 +1,18 @@
-from abc import ABC, abstractmethod
-from .elements.types import Type
+from collections import Counter
 
 class Context():
     def __init__(self,parent=None):
         self.symbols = {} if parent is None else parent.symbols.copy()
-        self.used = set()
+        self.used = Counter()
 
     def in_global_scope(self) -> None:
         return self.parent is None
 
     def used_symbols(self) -> None:
-        pass
+        return self.used
     
     def use_symbol(self,symbol) -> None:
-        self.used.add(symbol)
+        self.used[symbol]+=1
     
     def is_declared(self,symbol) -> None:
         return symbol in self.symbols

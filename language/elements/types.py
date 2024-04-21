@@ -1,7 +1,9 @@
 from abc import ABC, abstractmethod
 from enum import Enum
 from .element import Element
-
+from ..context import Context
+from typing import Iterator
+from ..issue import Issue
 class Type(Element):
     #Determines whether an instance of a specified type can be assigned to a variable of the current type
     @abstractmethod
@@ -23,6 +25,9 @@ class Type(Element):
     def __repr__(self) -> str:
         return str(self)
     
+    def validate(self, context: Context) -> Iterator[Issue]:
+        return [] #TODO
+     
 
 class Primitive(Type):
     def __eq__(self, other):
