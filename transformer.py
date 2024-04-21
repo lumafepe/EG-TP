@@ -19,6 +19,13 @@ class T(Transformer):
                 return types.CHAR()
             case 'bool':
                 return types.BOOL()
+            
+    def BOOL(self, token):
+        match token:
+            case 'true':
+                return expressions.Value(True, types.BOOL())
+            case 'false':
+                return expressions.Value(False, types.BOOL())
 
     def IDENTIFIER(self, token):
         return str(token)
@@ -208,7 +215,7 @@ class T(Transformer):
         return control.Function(token[0],token[1],token[2],token[3])
 
     def params(self, token):
-        return [(token[i], token[i+1]) for i in range(0, len(token), 2)]
+        return [control.FunctionArg(token[i], token[i+1]) for i in range(0, len(token), 2)]
 
     def function_call(self, token):
         self.counter['function_call'] += 1

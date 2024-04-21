@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Iterator
+from typing import Iterator, Optional
 from enum import Enum
 from .types import Type,BOOL,INT,LIST,ARRAY,TUPLE,CHAR,STRING
 from .element import Element
@@ -15,11 +15,11 @@ class Expression(Element):
     def __init__(self) -> None:
         super().__init__()
     @abstractmethod
-    def kind(self, context : Context) -> Kind:
+    def kind(self, context: Context) -> Optional[Kind]:
         pass
 
     @abstractmethod
-    def type(self,context : Context) -> Type:
+    def type(self, context: Context) -> Optional[Type]:
         pass
 
 
@@ -30,10 +30,10 @@ class Value(Expression):
         self.value = value
         self.valueType = valueType
 
-    def kind(self, context : Context) -> Kind:
+    def kind(self, context: Context) -> Optional[Kind]:
         return Kind.Constant
     
-    def type(self,context : Context) -> Type:
+    def type(self, context: Context) -> Optional[Type]:
         return self.valueType
 
     def validate(self, context: Context) -> Iterator[Issue]:
@@ -73,7 +73,7 @@ class MultiValueExpression(Expression):
             and len(self.values) == len(obj.values) \
             and all(a==b for a,b in zip(self.values,obj.values))
             
-    def kind(self, context : Context) -> Kind:
+    def kind(self, context: Context) -> Optional[Kind]:
         if all(t.kind(context) == Kind.Constant for t in self.values):
             return Kind.Constant
         else:
@@ -109,21 +109,21 @@ class Tuple(MultiValueExpression):
             yield Issue(IssueType.Error,self, "TODO: make cool messages")
         
 
-    def type(self,context : Context) -> Type:
+    def type(self, context: Context) -> Optional[Type]:
         return TUPLE([t.type(context) for t in self.values])
 
 class Array(UniTypeMultiValueExpression):
     def __init__(self, values: list[Expression]) -> None:
         super().__init__(values, '[' , ']')
 
-    def type(self,context : Context) -> Type:
+    def type(self, context: Context) -> Optional[Type]:
         return ARRAY(self.getBiggerType(context))
     
 class List(UniTypeMultiValueExpression):
     def __init__(self, values: list[Expression]) -> None:
         super().__init__(values, '<' , '>')
 
-    def type(self,context : Context) -> Type:
+    def type(self, context: Context) -> Optional[Type]:
         return LIST(self.getBiggerType(context))
 
 
@@ -133,8 +133,15 @@ class Variable(Expression):
         super().__init__()
         self.symbol = symbol
         
-    def kind(self, context : Context) -> Kind:
-        return Kind.Variable    #TODO: can be Literal if variable is const (must see context)
+    def kind(self, context: Context) -> Optional[Kind]:
+        if not context.is_declared_variable(self.symbol):
+            return None
+        
+        declaration = context.get_variable_declaration(self.symbol)
+        if declaration.const and declaration.value.kind(context) == Kind.Constant:
+            return Kind.Constant
+
+        return Kind.Variable
     
     def __eq__(self, obj: object) -> bool:
         return type(self)== type(obj) \
@@ -145,8 +152,11 @@ class Variable(Expression):
             yield Issue(IssueType.Error,self, "Undefined Variable")
         context.use_symbol(self.symbol)
     
-    def type(self, context: Context) -> Type:
-        return context.get_variable_declaration(self.symbol).type(context)
+    def type(self, context: Context) -> Optional[Type]:
+        if context.is_declared_variable(self.symbol):
+            return context.get_variable_declaration(self.symbol).type(context)
+        else:
+            return None
         
     def __str__(self):
         return self.symbol
@@ -161,7 +171,7 @@ class Function_call(Expression):
         self.name = name
         self.args = args
         
-    def kind(self, context : Context) -> Kind:
+    def kind(self, context: Context) -> Optional[Kind]:
         return Kind.Literal
     
     def __eq__(self, obj: object) -> bool:
@@ -176,10 +186,10 @@ class Function_call(Expression):
         if not context.is_declared_function(self.name):
             yield Issue(IssueType.Error,self, "Undefined Function")
         else:
-            elements = context.get_funtion_declaration(self.name).args  #list[str,Type]
-            elementTypes = map(lambda x:x[1],elements)
-            if len(elements) != len(self.args):
-                yield Issue(IssueType.Error,self, f"Wrong Number of arguments,  {len(elements)} expected but {len(self.args)} where given")
+            args = context.get_funtion_declaration(self.name).args
+            elementTypes = [arg.type for arg in args]
+            if len(args) != len(self.args):
+                yield Issue(IssueType.Error,self, f"Wrong Number of arguments,  {len(args)} expected but {len(self.args)} where given")
             else:
                 for arg,expectedType in zip(self.args,elementTypes):
                     if not arg.type(context).isAssignableFrom(expectedType):
@@ -195,7 +205,7 @@ class Function_call(Expression):
         return f"""<span class="function">{self.name}{args}</span>"""
         
     
-    def type(self, context: Context) -> Type:
+    def type(self, context: Context) -> Optional[Type]:
         return context.get_funtion_declaration(self.name).returnType
 
 
@@ -207,7 +217,7 @@ class Operation(Expression):
         self.operands = operands
         self.allowedTypes = allowedTypes
 
-    def kind(self, context : Context) -> Kind:
+    def kind(self, context: Context) -> Optional[Kind]:
         return Kind.Constant if all(o.kind(context) == Kind.Constant for o in self.operands) else Kind.Literal
 
     def getBiggerType(self,context):
@@ -267,7 +277,7 @@ class BinaryOperation(Operation):
         return s
 
 class BooleanBinaryOperation(BinaryOperation):
-    def type(self,context : Context) -> Type:
+    def type(self, context: Context) -> Optional[Type]:
         return BOOL()
 
 class Or(BooleanBinaryOperation):
@@ -302,7 +312,7 @@ class NumericBinaryOperation(BinaryOperation):
     def __init__(self, operator: str, lterm: Expression, rterm: Expression) -> None:
         super().__init__(operator, lterm, rterm, [INT,CHAR])
         
-    def type(self,context : Context) -> Type:
+    def type(self, context: Context) -> Optional[Type]:
         return self.getBiggerType(context)
 
 class Addition(NumericBinaryOperation):
@@ -333,19 +343,19 @@ class Expotentiation(NumericBinaryOperation):
 class BitwiseNot(UnaryOperation):
     def __init__(self, operand: Expression) -> None:
         super().__init__('~', operand,[INT,CHAR])
-    def type(self,context : Context) -> Type:
+    def type(self, context: Context) -> Optional[Type]:
         return self.operand.type(context)
 
 class Not(UnaryOperation):
     def __init__(self, operand: Expression) -> None:
         super().__init__('!', operand,[BOOL])
-    def type(self,context : Context) -> Type:
+    def type(self, context: Context) -> Optional[Type]:
         return BOOL()
 
 class Length(BinaryOperation):
     def __init__(self, lterm: Expression, rterm: Expression) -> None:
         super().__init__('#', lterm, rterm, [ARRAY])
-    def type(self,context : Context) -> Type:
+    def type(self, context: Context) -> Optional[Type]:
         return INT()
 
 class ArrayIndex(Expression):
@@ -354,7 +364,7 @@ class ArrayIndex(Expression):
         self.array = array
         self.index = index
 
-    def kind(self, context : Context) -> Kind:
+    def kind(self, context: Context) -> Optional[Kind]:
         if self.array.kind(context) == Kind.Constant and self.index.kind(context) == Kind.Constant:
             return Kind.Constant
 
@@ -363,7 +373,7 @@ class ArrayIndex(Expression):
 
         return Kind.Literal
     
-    def type(self,context : Context) -> Type:
+    def type(self, context: Context) -> Optional[Type]:
         return self.array.type(context).contained
     
     def validate(self, context: Context) -> Iterator[Issue]:
@@ -394,10 +404,10 @@ class TupleIndex(Expression):
         self.tuple = tuple
         self.index = index
 
-    def kind(self, context : Context) -> Kind:
+    def kind(self, context: Context) -> Optional[Kind]:
         return self.tuple.kind(context)
     
-    def type(self,context : Context) -> Type:
+    def type(self, context: Context) -> Optional[Type]:
         return self.tuple.type(context).tupled[self.index]
 
     def validate(self, context: Context) -> Iterator[Issue]:
