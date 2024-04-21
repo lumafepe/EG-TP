@@ -1,12 +1,10 @@
 from abc import ABC, abstractmethod
-from .types import Type,BOOL,INT,LIST,ARRAY,TUPLE,CHAR,STRING
 from typing import Iterator
 from enum import Enum
+from .types import Type,BOOL,INT,LIST,ARRAY,TUPLE,CHAR,STRING
 from .element import Element
-from .types import Type, INT, BOOL, CHAR, STRING, TUPLE, ARRAY, LIST
 from ..context import Context
 from ..issue import Issue, IssueType
-from typing import Iterator
 
 class Kind(Enum):
     Constant = 0
