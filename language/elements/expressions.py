@@ -129,7 +129,7 @@ class Variable(Expression):
         self.symbol = symbol
         
     def kind(self):
-        return Kind.Variable
+        return Kind.Variable    #TODO: can be Literal if variable is const (must see context)
     
     def __eq__(self, obj: object) -> bool:
         return type(self)== type(obj) and self.symbol == obj.symbol
@@ -160,7 +160,8 @@ class Function_call(Expression):
         for o in self.args:
             yield from o.validate(context)
         if not context.is_declared(self.name):
-            yield Issue(IssueType.Error,self, "TypeError. Undefined Funtion")
+            yield Issue(IssueType.Error,self, "Undefined Funtion")
+        #TODO: validate type of arguments
         context.use_symbol(self.name)
         
     def __str__(self):

@@ -36,25 +36,34 @@ class Declaration(Element):
         else:
             context.declare_variable(self)
 
+    def __eq__(self, obj) -> bool:
+        return type(self) == type(obj) \
+            and self.const == obj.const \
+            and self.variable == obj.variable \
+            and self.type == obj.type \
+            and self.value == obj.value
+    
+    def __str__(self) -> str:
+        return f"{'const' if self.const else 'var'} {self.variable}{f': {self.type}' if self.type != None else ''} = {self.value}"
+    
+
 class Assignment(Element):
-    def __init__(self, variable: str, value: Expression) -> None:
-        self.variable = variable
+    def __init__(self, dest: Expression, value: Expression) -> None:
+        self.dest = dest
         self.value = value
 
     def validate(self, context: Context) -> Iterator[Issue]:
+        yield from self.dest
         yield from self.value
 
-        if not context.is_declared_variable(self.variable):
-            yield Issue(IssueType.Error, self, "Variable not declared")
-        elif not context.get_declaration().isAssignableFrom(self.value.type(context)):
+        if not self.dest.type(context).isAssignableFrom(self.value.type(context)):
             yield Issue(IssueType.Error, self.value, "TypeError: TODO escrever")
 
     def __eq__(self, obj) -> bool:
-        return type(self) == type(obj) and self.variable == obj.variable and self.value == type.value
+        return type(self) == type(obj) and self.dest == obj.dest and self.value == type.value
 
     def __str__(self) -> str:
-        return f"{self.variable} = {self.value}"
+        return f"{self.dest} = {self.value}"
 
 
-
-#TODO: if, while, do-while, function
+#TODO: if, while, do-while
