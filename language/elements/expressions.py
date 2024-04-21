@@ -199,3 +199,56 @@ class Length(BinaryOperation):
         super().__init__('#', lterm, rterm, [ARRAY()])
     def type(self) -> Type:
         return INT()
+
+class ArrayIndex(Expression):
+    def __init__(self, array: Expression, index: Expression) -> None:
+        self.array = array
+        self.index = index
+
+    def kind(self) -> Kind:
+        if self.array.kind() == Kind.Constant and self.index.kind() == Kind.Constant:
+            return Kind.Constant
+
+        if self.array.kind() == Kind.Variable:
+            return Kind.Variable
+
+        return Kind.Literal
+    
+    def type(self) -> Type:
+        return self.array.type().contained
+    
+    def validate(self, context: Context) -> iter[Issue]:
+        yield from self.array.validate()
+        yield from self.index.validate()
+        if type(self.array.type()) != ARRAY:
+            yield Issue(IssueType.Error, self.array, "TypeError: TODO msg fixe")  
+        if type(self.index.type()) != INT:
+            yield Issue(IssueType.Error, self.index, "TypeError: TODO msg fixe")
+
+    def __eq__(self, obj: object) -> bool:
+        return type(self) == type(obj) and self.array == obj.array and self.index == obj.index
+    
+    def __str__(self) -> str:
+        return f"{self.array}[{self.index}]"
+
+class TupleIndex(Expression):
+    def __init__(self, tuple: Expression, index: int) -> None:
+        self.tuple = tuple
+        self.index = index
+
+    def kind(self) -> Kind:
+        return self.tuple.kind()
+    
+    def type(self) -> Type:
+        return self.tuple.type().tupled[self.index]
+
+    def validate(self, context: Context) -> iter[Issue]:
+        yield from self.tuple.validate()
+        if type(self.tuple.type()) != TUPLE:
+            yield Issue(IssueType.Error, self.tuple, "TypeError: TODO msg fixe")  
+
+    def __eq__(self, obj: object) -> bool:
+        return type(self) == type(obj) and self.tuple == obj.tuple and self.index == obj.index
+    
+    def __str__(self) -> str:
+        return f"{self.tuple}#{self.index}"
