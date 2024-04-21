@@ -78,7 +78,7 @@ class UniTypeMultiValueExpression(MultiValueExpression):
         return bigger_type
 
 class Tuple(MultiValueExpression):
-    def __init__(self, values: list[Expression], stringOpener: str, stringCloser: str) -> None:
+    def __init__(self, values: list[Expression]) -> None:
         super().__init__(values, '(' , ')')
 
     def validate(self, context: Context) -> Iterator[Issue]:
@@ -91,7 +91,7 @@ class Tuple(MultiValueExpression):
         return TUPLE([t.type(context) for t in self.values])
 
 class Array(UniTypeMultiValueExpression):
-    def __init__(self, values: list[Expression], stringOpener: str, stringCloser: str) -> None:
+    def __init__(self, values: list[Expression]) -> None:
         super().__init__(values, '[' , ']')
 
     def validate(self, context: Context) -> Iterator[Issue]:
@@ -108,7 +108,7 @@ class Array(UniTypeMultiValueExpression):
         return ARRAY(self.getBiggerType(context))
     
 class List(UniTypeMultiValueExpression):
-    def __init__(self, values: list[Expression], stringOpener: str, stringCloser: str) -> None:
+    def __init__(self, values: list[Expression]) -> None:
         super().__init__(values, '<' , '>')
 
     def validate(self, context: Context) -> Iterator[Issue]:
