@@ -13,7 +13,7 @@ class Kind(Enum):
 
 class Expression(Element):
     @abstractmethod
-    def kind(self) -> Kind:
+    def kind(self, context : Context) -> Kind:
         pass
 
     @abstractmethod
@@ -27,7 +27,7 @@ class Value(Expression):
         self.value = value
         self.valueType = valueType
 
-    def kind(self) -> Kind:
+    def kind(self, context : Context) -> Kind:
         return Kind.Constant
     
     def type(self,context : Context) -> Type:
@@ -55,8 +55,8 @@ class MultiValueExpression(Expression):
     def __eq__(self, obj: object) -> bool:
         return type(self) == type(obj) and len(self.values) == len(obj.values) and all(a==b for a,b in zip(self.values,obj.values))
 
-    def kind(self) -> Kind:
-        if all(t.kind() == Kind.Constant for t in self.values):
+    def kind(self, context : Context) -> Kind:
+        if all(t.kind(context) == Kind.Constant for t in self.values):
             return Kind.Constant
         else:
             return Kind.Literal
@@ -114,7 +114,7 @@ class Variable(Expression):
     def __init__(self,symbol) -> None:
         self.symbol = symbol
         
-    def kind(self):
+    def kind(self, context : Context) -> Kind:
         return Kind.Variable    #TODO: can be Literal if variable is const (must see context)
     
     def __eq__(self, obj: object) -> bool:
@@ -132,11 +132,11 @@ class Variable(Expression):
         return self.symbol
     
 class Function_call(Expression):
-    def __init__(self,name,args) -> None:
+    def __init__(self,name : str,args : list[Expression]) -> None:
         self.name = name
         self.args = args
         
-    def kind(self):
+    def kind(self, context : Context) -> Kind:
         return Kind.Literal
     
     def __eq__(self, obj: object) -> bool:
@@ -145,12 +145,21 @@ class Function_call(Expression):
     def validate(self, context: Context) -> Iterator[Issue]:
         for o in self.args:
             yield from o.validate(context)
-        if not context.is_declared(self.name):
-            yield Issue(IssueType.Error,self, "Undefined Funtion")
-        #TODO: validate type of arguments
+        if not context.is_declared_function(self.name):
+            yield Issue(IssueType.Error,self, "Undefined Function")
+        else:
+            elements = context.get_funtion_declaration(self.name).args  #list[str,Type]
+            elementTypes = map(lambda x:x[1],elements)
+            if len(elements) != len(self.args):
+                yield Issue(IssueType.Error,self, f"Wrong Number of arguments,  {len(elements)} expected but {len(self.args)} where given")
+            else:
+                for arg,expectedType in zip(self.args,elementTypes):
+                    if not arg.type(context).isAssignableFrom(expectedType):
+                        yield Issue(IssueType.Error,arg, f"Argument has wrong type. {str(expectedType)} expected but got {str(arg.type(context))} instead")
+            
         context.use_symbol(self.name)
         
-    def __str__(self):
+    def __str__(self) -> str :
         return self.name +'('+' ,'.join(str(t) for t in self.args) +')'
     
     def type(self, context: Context) -> Type:
@@ -164,8 +173,8 @@ class Operation(Expression):
         self.operands = operands
         self.allowedTypes = allowedTypes
 
-    def kind(self) -> Kind:
-        return Kind.Constant if all(o.kind() == Kind.Constant for o in self.operands) else Kind.Literal
+    def kind(self, context : Context) -> Kind:
+        return Kind.Constant if all(o.kind(context) == Kind.Constant for o in self.operands) else Kind.Literal
 
     def getBiggerType(self,context):
         bigger_type = self.operands[0].type(context)
@@ -301,11 +310,11 @@ class ArrayIndex(Expression):
         self.array = array
         self.index = index
 
-    def kind(self) -> Kind:
-        if self.array.kind() == Kind.Constant and self.index.kind() == Kind.Constant:
+    def kind(self, context : Context) -> Kind:
+        if self.array.kind(context) == Kind.Constant and self.index.kind(context) == Kind.Constant:
             return Kind.Constant
 
-        if self.array.kind() == Kind.Variable:
+        if self.array.kind(context) == Kind.Variable:
             return Kind.Variable
 
         return Kind.Literal
@@ -330,8 +339,8 @@ class TupleIndex(Expression):
         self.tuple = tuple
         self.index = index
 
-    def kind(self) -> Kind:
-        return self.tuple.kind()
+    def kind(self, context : Context) -> Kind:
+        return self.tuple.kind(context)
     
     def type(self,context : Context) -> Type:
         return self.tuple.type(context).tupled[self.index]

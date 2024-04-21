@@ -1,7 +1,7 @@
 from typing import Iterator, Optional
 from .element import Element
 from .expressions import Expression, Kind
-from .types import Type
+from .types import Type,BOOL
 from ..context import Context
 from ..issue import Issue, IssueType
 
@@ -56,8 +56,8 @@ class Assignment(Element):
         yield from self.dest.validate(context)
         yield from self.value.validate(context)
 
-        if self.dest.kind() != Kind.Variable:
-            yield Issue(IssueType.Error, self, f"Cannot assign to expression of kind {self.dest.kind()}")
+        if self.dest.kind(context) != Kind.Variable:
+            yield Issue(IssueType.Error, self, f"Cannot assign to expression of kind {self.dest.kind(context)}")
         else:
             yield from TypeError.check(self.value, self.dest.type(context), context)
 
@@ -82,7 +82,11 @@ class Program(Element):
         return type(self) == type(obj) and self.instructions == obj.instructions
     
     def __str__(self) -> str:
-        return '\n'.join(str(o) for o in self.instructions)
+        semicolon = lambda x: '' if any(isinstance(x,c) for c in [If,While,Function,Do_while]) else ';'
+        return '\n'.join((str(o) + semicolon(o)) for o in self.instructions)
+    
+    def isIf(self) -> bool:
+        return len(self.instructions)==1 and type(self.instructions[0]) == If
 
 class Function(Element):
     def __init__(self, name: str, args: list[(str,Type)], returnType: Type, body: Program) -> None:
@@ -98,7 +102,7 @@ class Function(Element):
         if context.is_declared(self.name):
             yield Issue(IssueType.Error, self, f"Redefinition of symbol '{self.name}'")
 
-        subcontext = Context(context)
+        subcontext = Context(context,self.returnType)
 
         for arg,type in self.args:
             if subcontext.is_declared(arg):
@@ -120,4 +124,111 @@ class Function(Element):
         return f"func {self.name}({', '.join(f'{arg}: {type}' for arg,type in self.args)}): {self.returnType} {{\n{self.body}\n}}"
 
 
-#TODO: if, while, do-while, return
+class Return(Element):
+    def __init__(self, exp: Expression) -> None:
+        self.value = exp
+    
+    def validate(self, context: Context) -> Iterator[Issue]:
+        yield from self.value.validate(context)
+        if not self.value.type(context).isAssignableFrom(context.get_returnType()):
+            yield Issue(IssueType.Error, self, f"Wrong type, {self.value.type(context)} is returned but {context.get_returnType()} was expected ")
+        
+    def type(self,context:Context) -> Type :
+        return context.get_returnType()
+
+    def __str__(self) -> str:
+        return f"return {str(self.value)}"
+    
+    def __eq__(self, obj) -> bool:
+         return type(self) == type(obj) \
+            and self.value == obj.value
+
+class If(Element):
+    def __init__(self, condition : Expression, ifScope : Program, elseScope : Program|None) -> None:
+        self.condition = condition
+        self.ifScope = ifScope
+        self.elseScope = elseScope
+    
+    def validate(self, context: Context) -> Iterator[Issue]:
+        yield from self.condition.validate(context)
+        if not self.condition.type(context).isAssignableFrom(BOOL()):
+            yield Issue(IssueType.Error, self.condition,"Condition is not Boolean")
+        
+        ifContext = Context(context,context.get_returnType())
+        yield from self.ifScope.validate(ifContext)
+        
+        if self.elseScope:
+            elseContext = Context(context,context.get_returnType())
+            yield from self.elseScope.validate(elseContext)
+    
+    def __eq__(self, obj) -> bool:
+        return type(self) == type(obj) \
+            and self.condition == obj.condition \
+            and self.ifScope == obj.ifScope \
+            and self.elseScope == obj.elseScope
+            
+    def hasElse(self) -> bool:
+        return self.elseScope != None
+    
+    def __str__(self) -> str:
+        s=f"""if ({str(self.condition)}) {{
+    {str(self.ifScope)}
+}}
+"""
+        if self.hasElse():
+            if self.elseScope.isIf():
+                #elif
+                s+=f"""el{str(self.elseScope)}"""
+            else:
+                s+=f"""else {{
+    {str(self.elseScope)}
+}}"""
+        return s
+
+class While(Element):
+    def __init__(self, condition:Expression, scope: Program) -> None:
+        self.condition = condition
+        self.scope = scope
+        
+    def validate(self, context: Context) -> Iterator[Issue]:
+        yield from self.condition.validate(context)
+        if not self.condition.type(context).isAssignableFrom(BOOL()):
+            yield Issue(IssueType.Error, self.condition,"Condition is not Boolean")
+        
+        scopeContext = Context(context,context.get_returnType())
+        yield from self.scope.validate(scopeContext)
+    
+    def __eq__(self, obj) -> bool:
+        return type(self) == type(obj) \
+            and self.condition == obj.condition \
+            and self.scope == obj.scope
+
+    def __str__(self) -> str:
+        return f"""
+while ({str(self.condition)}) {{
+    {str(self.scope)}
+}}"""
+            
+class Do_while(Element):
+    def __init__(self, condition:Expression, scope: Program) -> None:
+        self.condition = condition
+        self.scope = scope
+        
+    def validate(self, context: Context) -> Iterator[Issue]:
+        yield from self.condition.validate(context)
+        if not self.condition.type(context).isAssignableFrom(BOOL()):
+            yield Issue(IssueType.Error, self.condition,"Condition is not Boolean")
+        
+        scopeContext = Context(context,context.get_returnType())
+        yield from self.scope.validate(scopeContext)
+    
+    def __eq__(self, obj) -> bool:
+        return type(self) == type(obj) \
+            and self.condition == obj.condition \
+            and self.scope == obj.scope
+
+    def __str__(self) -> str:
+        return f"""
+do {{
+    {str(self.scope)}
+}} while ({str(self.condition)})"""

@@ -109,10 +109,9 @@ lark_parser = r"""
 
 
 input = """
-var a : int;
-const b : int = 5;
-const c = 55;
-a= '1'; 
+func ola(i:int,o:string) : int {
+    return 2;
+}
 """
 
 

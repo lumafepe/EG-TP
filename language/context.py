@@ -1,11 +1,12 @@
 from collections import Counter
 
 class Context():
-    def __init__(self,parent=None):
-        self.variables = {} if parent is None else parent.variable.copy()
+    def __init__(self,parent=None,returnType=None):
+        self.variables = {} if parent is None else parent.variables.copy()
         self.functions = {} if parent is None else parent.functions.copy()
         self.usedVariables = Counter()
         self.usedFunctions = Counter()
+        self.returnType = returnType
 
     def in_global_scope(self) -> bool:
         return self.parent is None
@@ -51,3 +52,6 @@ class Context():
         if symbol in self.variables: return self.variables[symbol]
         elif symbol in self.functions: return self.functions[symbol]
         else : return None
+    
+    def get_returnType(self):
+        return self.returnType
