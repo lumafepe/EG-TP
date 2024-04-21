@@ -303,10 +303,7 @@ class NumericBinaryOperation(BinaryOperation):
         super().__init__(operator, lterm, rterm, [INT,CHAR])
         
     def type(self,context : Context) -> Type:
-        if self.lterm.type == CHAR() and self.rterm.type == CHAR():
-            return CHAR()
-        else:
-            return INT()
+        return self.getBiggerType(context)
 
 class Addition(NumericBinaryOperation):
     def __init__(self, lterm: Expression, rterm: Expression) -> None:
