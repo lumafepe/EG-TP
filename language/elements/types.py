@@ -5,6 +5,9 @@ from ..context import Context
 from typing import Iterator
 from ..issue import Issue
 class Type(Element):
+    def __init__(self) -> None:
+        super().__init__()
+    
     #Determines whether an instance of a specified type can be assigned to a variable of the current type
     @abstractmethod
     def isAssignableFrom(self, other) -> bool:
@@ -34,14 +37,19 @@ class Type(Element):
      
 
 class Primitive(Type):
+    def __init__(self) -> None:
+        super().__init__()
     def __eq__(self, other):
         return type(self) == type(other)
     
-    def toHTML(self, errors) -> str:
+    def _toHTML(self, errors) -> str:
         s = f"""<span class="type">{str(self)}</span>"""
         return s
 
 class INT(Primitive):
+    def __init__(self) -> None:
+        super().__init__()
+        
     def isAssignableFrom(self, other: Type) -> bool:
         return type(other) in [INT, CHAR, BOOL]
     
@@ -55,6 +63,9 @@ class INT(Primitive):
         return 'int'
     
 class STRING(Primitive):
+    def __init__(self) -> None:
+        super().__init__()
+        
     def isAssignableFrom(self, other: Type) -> bool:
         return type(other) in [STRING]
     
@@ -68,6 +79,9 @@ class STRING(Primitive):
         return 'string'
 
 class CHAR(Primitive):
+    def __init__(self) -> None:
+        super().__init__()
+        
     def isAssignableFrom(self, other: Type) -> bool:
         return type(other) in [CHAR]
     
@@ -81,6 +95,9 @@ class CHAR(Primitive):
         return 'char'
 
 class BOOL(Primitive):
+    def __init__(self) -> None:
+        super().__init__()
+        
     def isAssignableFrom(self, other: Type) -> bool:
         return type(other) in [BOOL]
     
@@ -95,6 +112,7 @@ class BOOL(Primitive):
 
 class TUPLE(Type):
     def __init__(self, tupled: list[Type]):
+        super().__init__()
         assert len(tupled) >= 2
         self.tupled = tupled
 
@@ -116,11 +134,12 @@ class TUPLE(Type):
     def __str__(self):
         return f"({', '.join(self.tupled)})"
 
-    def toHTML(self, errors) -> str:
+    def _toHTML(self, errors) -> str:
         return f"""<span class="encloser">({'<span class="operator">, </span>'.join(tip.toHTML(errors) for tip in self.tupled)})</span>"""
 
 class Container(Type):
     def __init__(self, contained: Type) -> None:
+        super().__init__()
         self.contained = contained
 
     def isAssignableFrom(self, other: Type) -> bool:
@@ -142,7 +161,7 @@ class ARRAY(Container):
         return f"""<span class="encloser">[{'<span class="operator">, </span>'.join(self.contained.toHTMLInstance(v) for v in value)}]</span>"""
 
     
-    def toHTML(self, errors) -> str:
+    def _toHTML(self, errors) -> str:
         return f"""<span class="encloser">[{self.contained.toHTML(errors)}]"""
     
     
@@ -158,5 +177,5 @@ class LIST(Container):
         return f"""<span class="encloser"><{'<span class="operator">, </span>'.join(self.contained.toHTMLInstance(v) for v in value)}></span>"""
 
     
-    def toHTML(self, errors) -> str:
+    def _toHTML(self, errors) -> str:
         return f"""<span class="encloser"><{self.contained.toHTML(errors)}>"""

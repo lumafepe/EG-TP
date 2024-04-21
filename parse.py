@@ -2,6 +2,7 @@ from lark import Lark
 import sys
 from transformer import T
 from language.context import Context
+from collections import defaultdict
 
 
 #const_tuple: "(" ( (constant ",")+ constant? | constant "," | ) ")"
@@ -119,16 +120,21 @@ func ola(i:int,o:char) : int {
     }
 }
 
-var a : int = ola(1,'a');
+var a : int = ola("a",'a');
 """
 
 
 p = Lark(lark_parser,start="program") # cria um objeto parser
 tree = p.parse(input)  # retorna uma tree
 linguagem = T().transform(tree)
-a=list(linguagem.validate(Context()))
-print(a)
-print(linguagem)
+a=linguagem.validate(Context())
+
+errors = defaultdict(set)
+for i in a:
+    print(i)
+    errors[i.elem.id].add(i)
+
+
 with open('a.html') as f:
     with open('b.html','w') as f1:
-        f1.write(f.read().replace(r"{REPLACE}",linguagem.toHTML(a)))
+        f1.write(f.read().replace(r"{REPLACE}",linguagem.toHTML(errors)))

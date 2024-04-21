@@ -12,6 +12,8 @@ class Kind(Enum):
     Literal = 2
 
 class Expression(Element):
+    def __init__(self) -> None:
+        super().__init__()
     @abstractmethod
     def kind(self, context : Context) -> Kind:
         pass
@@ -23,6 +25,7 @@ class Expression(Element):
 
 class Value(Expression):
     def __init__(self,value,valueType:Type):
+        super().__init__()
         assert type(valueType) in [INT, BOOL, CHAR, STRING]
         self.value = value
         self.valueType = valueType
@@ -37,17 +40,21 @@ class Value(Expression):
         return []
     
     def __eq__(self, obj) -> bool:
-        return type(self) == type(obj) and self.valueType == obj.type and self.value == obj.value
-
+        return type(self) == type(obj) \
+            and self.valueType == obj.type \
+                and self.value == obj.value
+                
+    
     def __str__(self) -> str:
         return self.valueType.printInstance(self.value)
     
-    def toHTML(self, errors) -> str:
+    def _toHTML(self, errors) -> str:
         return self.valueType.toHTMLInstance(self.value)
     
     
 class MultiValueExpression(Expression):
     def __init__(self, values: list[Expression],stringOpener:str,stringCloser:str) -> None:
+        super().__init__()
         self.values = values
         self.stringOpener = stringOpener
         self.stringCloser = stringCloser
@@ -55,13 +62,17 @@ class MultiValueExpression(Expression):
     def __str__(self) -> str:
         return self.stringOpener+', '.join(str(s) for s in self.values) + self.stringCloser
     
-    def toHTML(self, errors) -> str:
+    def _toHTML(self, errors) -> str:
         return f"""<span class="encloser">{self.stringOpener}{'<span class="operator">, </span>'.join(s.toHTML(errors) for s in self.values)}{self.stringCloser}</span>"""
         
     
     def __eq__(self, obj: object) -> bool:
-        return type(self) == type(obj) and len(self.values) == len(obj.values) and all(a==b for a,b in zip(self.values,obj.values))
-
+        return type(self) == type(obj) \
+            and self.stringOpener == obj.stringOpener \
+            and self.stringCloser == obj.stringCloser \
+            and len(self.values) == len(obj.values) \
+            and all(a==b for a,b in zip(self.values,obj.values))
+            
     def kind(self, context : Context) -> Kind:
         if all(t.kind(context) == Kind.Constant for t in self.values):
             return Kind.Constant
@@ -119,13 +130,15 @@ class List(UniTypeMultiValueExpression):
 class Variable(Expression):
     
     def __init__(self,symbol) -> None:
+        super().__init__()
         self.symbol = symbol
         
     def kind(self, context : Context) -> Kind:
         return Kind.Variable    #TODO: can be Literal if variable is const (must see context)
     
     def __eq__(self, obj: object) -> bool:
-        return type(self)== type(obj) and self.symbol == obj.symbol
+        return type(self)== type(obj) \
+            and self.symbol == obj.symbol
 
     def validate(self, context: Context) -> Iterator[Issue]:
         if not context.is_declared(self.symbol):
@@ -138,12 +151,13 @@ class Variable(Expression):
     def __str__(self):
         return self.symbol
     
-    def toHTML(self, errors) -> str:
+    def _toHTML(self, errors) -> str:
         return f"""<span class="variable">{self.symbol}</span>"""
     
     
 class Function_call(Expression):
     def __init__(self,name : str,args : list[Expression]) -> None:
+        super().__init__()
         self.name = name
         self.args = args
         
@@ -151,8 +165,11 @@ class Function_call(Expression):
         return Kind.Literal
     
     def __eq__(self, obj: object) -> bool:
-        return type(self)== type(obj) and self.name == obj.name and len(self.args) == len(obj.args) and all(t==k for t,k in zip(self.args,obj.args))
-
+        return type(self)== type(obj) \
+            and self.name == obj.name \
+            and len(self.args) == len(obj.args) \
+            and all(t==k for t,k in zip(self.args,obj.args))
+    
     def validate(self, context: Context) -> Iterator[Issue]:
         for o in self.args:
             yield from o.validate(context)
@@ -173,7 +190,7 @@ class Function_call(Expression):
     def __str__(self) -> str :
         return self.name +'('+' ,'.join(str(t) for t in self.args) +')'
     
-    def toHTML(self, errors) -> str:
+    def _toHTML(self, errors) -> str:
         args = f"""<span class="encloser">({'<span class="operator">, </span>'.join(t.toHTML(errors) for t in self.args)})</span>"""
         return f"""<span class="function">{self.name}{args}</span>"""
         
@@ -185,6 +202,7 @@ class Function_call(Expression):
 #Assumes all operands are of the same type, or are assignable to the same type
 class Operation(Expression):
     def __init__(self, operator: str, operands: list[Expression], allowedTypes: list[Type]) -> None:
+        super().__init__()
         self.operator = operator
         self.operands = operands
         self.allowedTypes = allowedTypes
@@ -210,7 +228,8 @@ class Operation(Expression):
     def __eq__(self, obj: object) -> bool:
         return type(self) == type(obj) \
             and self.operator == obj.operator \
-            and self.operands == obj.operands
+            and all(t==k for t,k in zip(self.operands,obj.operands))
+
 
 class UnaryOperation(Operation):
     def __init__(self, operator: str, operand: Expression, allowedTypes: list[Type]) -> None:
@@ -222,7 +241,7 @@ class UnaryOperation(Operation):
     def __str__(self) -> bool:
         return f"{self.operator}{str(self.operand())}"
     
-    def toHTML(self, errors) -> str:
+    def _toHTML(self, errors) -> str:
         s =  f"""<span class="operator">{self.operator}</span>"""
         s += self.operand().toHTML(errors)
         return s
@@ -241,7 +260,7 @@ class BinaryOperation(Operation):
     def __str__(self) -> bool:
         return f"{str(self.lterm())} {self.operator} {str(self.rterm())}"
     
-    def toHTML(self, errors) -> str:
+    def _toHTML(self, errors) -> str:
         s = self.lterm().toHTML(errors)
         s +=  f"""<span class="operator">{self.operator}</span>"""
         s += self.rterm().toHTML(errors)
@@ -334,6 +353,7 @@ class Length(BinaryOperation):
 
 class ArrayIndex(Expression):
     def __init__(self, array: Expression, index: Expression) -> None:
+        super().__init__()
         self.array = array
         self.index = index
 
@@ -356,12 +376,15 @@ class ArrayIndex(Expression):
         yield from TypeError.check(self.index, INT, context)
 
     def __eq__(self, obj: object) -> bool:
-        return type(self) == type(obj) and self.array == obj.array and self.index == obj.index
+        return type(self) == type(obj) \
+            and self.array == obj.array \
+            and self.index == obj.index
+
     
     def __str__(self) -> str:
         return f"{self.array}[{self.index}]"
 
-    def toHTML(self, errors) -> str:
+    def _toHTML(self, errors) -> str:
         s = self.array.toHTML(errors)
         s += """<span class="operator">[</span>"""
         s += self.index.toHTML(errors)
@@ -370,6 +393,7 @@ class ArrayIndex(Expression):
 
 class TupleIndex(Expression):
     def __init__(self, tuple: Expression, index: int) -> None:
+        super().__init__()
         self.tuple = tuple
         self.index = index
 
@@ -384,12 +408,14 @@ class TupleIndex(Expression):
         yield from TypeError.check(self.tuple, TUPLE, context)
 
     def __eq__(self, obj: object) -> bool:
-        return type(self) == type(obj) and self.tuple == obj.tuple and self.index == obj.index
+        return type(self) == type(obj) \
+            and self.tuple == obj.tuple \
+            and self.index == obj.index
     
     def __str__(self) -> str:
         return f"{self.tuple}#{self.index}"
     
-    def toHTML(self, errors) -> str:
+    def _toHTML(self, errors) -> str:
         s = self.tuple.toHTML(errors)
         s += f"""<span class="operator">#{self.index}</span>"""
         return s
