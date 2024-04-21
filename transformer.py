@@ -1,7 +1,5 @@
 from lark import Transformer
-
 from language.elements import types, expressions, control
-
 from collections import Counter
 
 
@@ -138,10 +136,10 @@ class T(Transformer):
                 return expressions.Length(token[1])
 
     def op_element(self, token):
-        return expressions.Or(token[0], token[2])  # TODO
+        return expressions.Or(token[0], token[2])
 
     def op_indexation(self, token):
-        return expressions.Or(token[0], token[2])  # TODO
+        return expressions.Or(token[0], token[2])
 
     def variable(self, token):
         return expressions.Variable(token[0])

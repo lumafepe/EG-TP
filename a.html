@@ -5,6 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Nested Spans Example</title>
     <style>
+        span {
+            margin-top: 1px;
+            margin-bottom: 1px;
+        }
         html, body {
             background-color: rgb(36, 34, 46);
             color: white; 
@@ -33,17 +37,12 @@
         .encloser {
             color: rgb(251, 255, 0);
         }
-        .scope {
-            color: rgb(251, 255, 0);
-            margin-left: 20px;
-        }
         .line {
-            display: block;
-            margin-left: 20px;
         }
         .sugestion {
             position: relative;
-            text-decoration: underline blue;
+            text-decoration: solid underline blue;
+            display: inline-block;
         }
         .sugestion:hover::after {
             content: attr(message);
@@ -58,7 +57,8 @@
         }
         .warning {
             position: relative;
-            text-decoration: underline yellow;
+            text-decoration: solid underline yellow;
+            display: inline-block;
         }
         .warning:hover::after {
             content: attr(message);
@@ -73,7 +73,8 @@
         }
         .error {
             position: relative;
-            text-decoration: underline red;
+            text-decoration: solid underline red;
+            display: inline-block;
         }
         .error:hover::after {
             content: attr(message);
@@ -106,27 +107,20 @@
             element.setAttribute('message', message); // Set the data-message attribute
         });
 
-        const underlineErrorElements = document.querySelectorAll('.error');
+        const lines = document.querySelectorAll('.line');
+
+        lines.forEach(element => {
+            const index = element.getAttribute('index');
+            element.style.marginLeft = index*20 + 'px';
+        });
+    </script>
+    <script>
+        const margins = document.querySelectorAll('.error');
 
         underlineErrorElements.forEach(element => {
             const message = element.getAttribute('message');
             element.setAttribute('message', message); // Set the data-message attribute
         });
-    </script>
-    <script>
-        function setMargins(scopeElement, margin) {
-            var lines = scopeElement.querySelectorAll('.line');
-            lines.forEach(function(line) {
-                line.style.marginLeft = margin + 'px';
-            });
-            var nestedScopes = scopeElement.querySelectorAll('.scope');
-            nestedScopes.forEach(function(nestedScope) {
-              setMargins(nestedScope, margin + 20); // Recursive call for nested scopes
-            });
-        }
-
-        var scope = document.querySelector('.scope');
-        setMargins(scope, 20);
     </script>
 </body>
 </html>

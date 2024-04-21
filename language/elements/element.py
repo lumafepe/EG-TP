@@ -26,10 +26,6 @@ class Element(ABC):
         return str(self)
     
     @abstractmethod
-    def __hash__(self):
-        pass
-    
-    @abstractmethod
     def _toHTML(self, errors, depth=0) -> str:
         pass
     

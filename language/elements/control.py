@@ -254,7 +254,7 @@ class If(Element):
             else:
                 s+=f"""<span class="control"> else</span>"""
                 s+=f"""<span class="scope"> {{
-<br>{self.ifScope.toHTML(errors,depth+1)}
+<br>{self.elseScope.toHTML(errors,depth+1)}
 <br><span class="line" index={depth}></span>}}</span>"""
 
         s = s.replace(f"""<span class="control">elif</span><span class="line" index={depth}></span><span class="control">if </span>""",
