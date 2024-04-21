@@ -1,6 +1,6 @@
 from typing import Iterator, Optional
 from .element import Element
-from .expressions import Expression
+from .expressions import Expression, Kind
 from .types import Type
 from ..context import Context
 from ..issue import Issue, IssueType
@@ -28,8 +28,8 @@ class Declaration(Element):
                 yield Issue(IssueType.Error, self, "Constants must be initialized")
             elif self.valueType == None:
                 yield Issue(IssueType.Error, self, "Cannot infer type of uninitialized variable")
-        elif self.valueType != None and not self.valueType.isAssignableFrom(self.value.type(context)):
-            yield Issue(IssueType.Error, self.value, "TypeError: TODO escrever")
+        else:
+            yield from TypeError.check(self.value, self.valueType, context)
 
         if context.is_declared(self.variable):
             yield Issue(IssueType.Error, self, "Symbol already declared")
@@ -56,8 +56,10 @@ class Assignment(Element):
         yield from self.dest.validate(context)
         yield from self.value.validate(context)
 
-        if not self.dest.type(context).isAssignableFrom(self.value.type(context)):
-            yield Issue(IssueType.Error, self.value, "TypeError: TODO escrever")
+        if self.dest.kind() != Kind.Variable:
+            yield Issue(IssueType.Error, self, f"Cannot assign to expression of kind {self.dest.kind()}")
+        else:
+            yield from TypeError.check(self.value, self.dest.type(context), context)
 
     def __eq__(self, obj) -> bool:
         return type(self) == type(obj) and self.dest == obj.dest and self.value == obj.value
@@ -67,18 +69,55 @@ class Assignment(Element):
 
 
 class Program(Element):
-    def __init__(self, instructions) -> None:
+    def __init__(self, instructions: list[Element]) -> None:
         self.instructions = instructions
     
     def validate(self, context: Context) -> Iterator[Issue]:
         for o in self.instructions:
             yield from o.validate(context)
+
+        #TODO: generate warnings for unused symbols declared in this context
     
     def __eq__(self, obj) -> bool:
-        return type(self) == type(obj) and len(self.instructions) == len(obj.instructions) and all(t==k for t,k in zip(self.instructions,obj.instructions))
+        return type(self) == type(obj) and self.instructions == obj.instructions
     
     def __str__(self) -> str:
         return '\n'.join(str(o) for o in self.instructions)
 
+class Function(Element):
+    def __init__(self, name: str, args: list[(str,Type)], returnType: Type, body: Program) -> None:
+        self.name = name
+        self.args = args
+        self.returnType = returnType
+        self.body = body
 
-#TODO: if, while, do-while
+    def validate(self, context: Context) -> Iterator[Issue]:
+        for _,type in self.args:
+            yield from type.validate(context)
+
+        if context.is_declared(self.name):
+            yield Issue(IssueType.Error, self, f"Redefinition of symbol '{self.name}'")
+
+        subcontext = Context(context)
+
+        for arg,type in self.args:
+            if subcontext.is_declared(arg):
+                yield Issue(IssueType.Error, self, f"Redefinition of symbol '{arg}'")
+            else:
+                subcontext.declare_variable(Declaration(False, arg, type, None))
+
+        yield from self.body.validate(subcontext)
+        context.declare_function(self)
+
+    def __eq__(self, obj) -> bool:
+        return type(self) == type(obj) \
+            and self.name == obj.name \
+            and self.args == obj.args \
+            and self.returnType == obj.returnType \
+            and self.body == obj.body
+    
+    def __str__(self) -> str:
+        return f"func {self.name}({', '.join(f'{arg}: {type}' for arg,type in self.args)}): {self.returnType} {{\n{self.body}\n}}"
+
+
+#TODO: if, while, do-while, return

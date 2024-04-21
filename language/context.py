@@ -36,10 +36,10 @@ class Context():
     
     
     #elem is the whole declaration, not just the value
-    def declare_variable(self,decleration) -> None:
-        self.variables[decleration.variable]=decleration
-    def declare_function(self,name,elem) -> None:
-        self.functions[name]=elem
+    def declare_variable(self,declaration) -> None:
+        self.variables[declaration.variable]=declaration
+    def declare_function(self,elem) -> None:
+        self.functions[elem.name]=elem
         
     def get_variable_declaration(self,symbol):
         if symbol in self.variables: return self.variables[symbol]

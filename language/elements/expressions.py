@@ -4,7 +4,7 @@ from enum import Enum
 from .types import Type,BOOL,INT,LIST,ARRAY,TUPLE,CHAR,STRING
 from .element import Element
 from ..context import Context
-from ..issue import Issue, IssueType
+from ..issue import Issue, IssueType, TypeError
 
 class Kind(Enum):
     Constant = 0
@@ -74,6 +74,12 @@ class UniTypeMultiValueExpression(MultiValueExpression):
                 if o.type(context).isAssignableFrom(bigger_type):
                     bigger_type = o.type(context)
         return bigger_type
+    
+    def validate(self, context: Context) -> Iterator[Issue]:
+        yield from super().validate(context)
+        bigger_type = self.getBiggerType(context)
+        for o in self.values:
+            TypeError.check(o, bigger_type, context)
 
 class Tuple(MultiValueExpression):
     def __init__(self, values: list[Expression]) -> None:
@@ -81,8 +87,8 @@ class Tuple(MultiValueExpression):
 
     def validate(self, context: Context) -> Iterator[Issue]:
         yield from super().validate(context)
-        if len(self.values) :
-            yield Issue(IssueType.Error,self, "TypeError. TODO: make cool messages")
+        if len(self.values) < 2:
+            yield Issue(IssueType.Error,self, "TODO: make cool messages")
         
 
     def type(self,context : Context) -> Type:
@@ -92,32 +98,12 @@ class Array(UniTypeMultiValueExpression):
     def __init__(self, values: list[Expression]) -> None:
         super().__init__(values, '[' , ']')
 
-    def validate(self, context: Context) -> Iterator[Issue]:
-        yield from super().validate(context)
-        bigger_type = self.values[0].type(context)
-        for o in self.values:
-            if not bigger_type.isAssignableFrom(o.type(context)):
-                if o.type(context).isAssignableFrom(bigger_type):
-                    bigger_type = o.type(context)
-                else:
-                    yield Issue(IssueType.Error,self, "TypeError. TODO: make cool messages")
-
     def type(self,context : Context) -> Type:
         return ARRAY(self.getBiggerType(context))
     
 class List(UniTypeMultiValueExpression):
     def __init__(self, values: list[Expression]) -> None:
         super().__init__(values, '<' , '>')
-
-    def validate(self, context: Context) -> Iterator[Issue]:
-        yield from super().validate(context)
-        bigger_type = self.values[0].type(context)
-        for o in self.values:
-            if not bigger_type.isAssignableFrom(o.type(context)):
-                if o.type(context).isAssignableFrom(bigger_type):
-                    bigger_type = o.type(context)
-                else:
-                    yield Issue(IssueType.Error,self,"TypeError. TODO: make cool messages")
 
     def type(self,context : Context) -> Type:
         return LIST(self.getBiggerType(context))
@@ -136,7 +122,7 @@ class Variable(Expression):
 
     def validate(self, context: Context) -> Iterator[Issue]:
         if not context.is_declared(self.symbol):
-            yield Issue(IssueType.Error,self, "TypeError. Undefined Variable")
+            yield Issue(IssueType.Error,self, "Undefined Variable")
         context.use_symbol(self.symbol)
     
     def type(self, context: Context) -> Type:
@@ -168,7 +154,7 @@ class Function_call(Expression):
         return self.name +'('+' ,'.join(str(t) for t in self.args) +')'
     
     def type(self, context: Context) -> Type:
-        return context.get_funtion_declaration(self.symbol).type()
+        return context.get_funtion_declaration(self.symbol).returnType
 
 
 #Assumes all operands are of the same type, or are assignable to the same type
@@ -181,17 +167,20 @@ class Operation(Expression):
     def kind(self) -> Kind:
         return Kind.Constant if all(o.kind() == Kind.Constant for o in self.operands) else Kind.Literal
 
+    def getBiggerType(self,context):
+        bigger_type = self.operands[0].type(context)
+        for o in self.operands:
+            if not bigger_type.isAssignableFrom(o.type(context)) and o.type(context).isAssignableFrom(bigger_type):
+                    bigger_type = o.type(context)
+        return bigger_type
+
     def validate(self, context: Context) -> Iterator[Issue]:
         for o in self.operands:
             yield from o.validate(context)
         
         bigger_type = self.operands[0].type(context)
         for o in self.operands:
-            if not bigger_type.isAssignableFrom(o.type(context)):
-                if o.type(context).isAssignableFrom(bigger_type):
-                    bigger_type = o.type(context)
-                else:
-                    yield Issue(IssueType.Error,self, "TypeError. TODO: make cool messages")
+            TypeError.check(o, bigger_type, context)
 
     def __eq__(self, obj: object) -> bool:
         return type(self) == type(obj) \
@@ -327,10 +316,8 @@ class ArrayIndex(Expression):
     def validate(self, context: Context) -> Iterator[Issue]:
         yield from self.array.validate()
         yield from self.index.validate()
-        if type(self.array.type(context)) != ARRAY:
-            yield Issue(IssueType.Error, self.array, "TypeError: TODO msg fixe")  
-        if type(self.index.type(context)) != INT:
-            yield Issue(IssueType.Error, self.index, "TypeError: TODO msg fixe")
+        yield from TypeError.check(self.array, ARRAY, context)
+        yield from TypeError.check(self.index, INT, context)
 
     def __eq__(self, obj: object) -> bool:
         return type(self) == type(obj) and self.array == obj.array and self.index == obj.index
@@ -351,8 +338,7 @@ class TupleIndex(Expression):
 
     def validate(self, context: Context) -> Iterator[Issue]:
         yield from self.tuple.validate()
-        if type(self.tuple.type(context)) != TUPLE:
-            yield Issue(IssueType.Error, self.tuple, "TypeError: TODO msg fixe")  
+        yield from TypeError.check(self.tuple, TUPLE, context)
 
     def __eq__(self, obj: object) -> bool:
         return type(self) == type(obj) and self.tuple == obj.tuple and self.index == obj.index

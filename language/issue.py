@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 
 from enum import Enum
+from typing import Iterable
 
 # class syntax
 
@@ -18,3 +19,14 @@ class Issue:
         return self.msg
     def __repr__(self) -> str:
         return str(self)
+    
+class TypeError(Issue):
+    def __init__(self, expression, expectedType, actualType) -> None:
+        super().__init__(IssueType.Error, expression, f"TypeError: expected type '{expectedType}'; got '{actualType}'")
+
+    @staticmethod
+    def check(expression, expectedType, context) -> Iterable[TypeError]:
+        if expectedType != None:
+            actualType = expression.type(context)
+            if actualType != None and not expectedType.isAssignableFrom(actualType):
+                yield TypeError(expression, expectedType, actualType)
