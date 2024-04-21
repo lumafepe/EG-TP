@@ -107,11 +107,10 @@ lark_parser = r"""
 
 
 input = """
-5 == 7
 """
 
 
-p = Lark(lark_parser,start="expression") # cria um objeto parser
+p = Lark(lark_parser,start="array") # cria um objeto parser
 tree = p.parse(input)  # retorna uma tree
 linguagem = T().transform(tree)
 print(linguagem)

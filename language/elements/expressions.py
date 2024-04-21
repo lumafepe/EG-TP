@@ -140,9 +140,36 @@ class Variable(Expression):
         if not context.is_declared(self.symbol):
             yield Issue(IssueType.Error,self, "TypeError. Undefined Variable")
         context.use_symbol(self.symbol)
+    
+    def type(self, context: Context) -> Type:
+        return context.get_variable_declaration(self.symbol).type()
         
     def __str__(self):
         return self.symbol
+    
+class Function_call(Expression):
+    def __init__(self,name,args) -> None:
+        self.name = name
+        self.args = args
+        
+    def kind(self):
+        return Kind.Literal
+    
+    def __eq__(self, obj: object) -> bool:
+        return type(self)== type(obj) and self.name == obj.name and len(self.args) == len(obj.args) and all(t==k for t,k in zip(self.args,obj.args))
+
+    def validate(self, context: Context) -> Iterator[Issue]:
+        for o in self.args:
+            yield from o.validate(context)
+        if not context.is_declared(self.name):
+            yield Issue(IssueType.Error,self, "TypeError. Undefined Funtion")
+        context.use_symbol(self.name)
+        
+    def __str__(self):
+        return self.name +'('+' ,'.join(str(t) for t in self.args) +')'
+    
+    def type(self, context: Context) -> Type:
+        return context.get_funtion_declaration(self.symbol).type()
 
 
 #Assumes all operands are of the same type, or are assignable to the same type

@@ -2,21 +2,52 @@ from collections import Counter
 
 class Context():
     def __init__(self,parent=None):
-        self.symbols = {} if parent is None else parent.symbols.copy()
-        self.used = Counter()
+        self.variables = {} if parent is None else parent.variable.copy()
+        self.functions = {} if parent is None else parent.functions.copy()
+        self.usedVariables = Counter()
+        self.usedFunctions = Counter()
 
-    def in_global_scope(self) -> None:
+    def in_global_scope(self) -> bool:
         return self.parent is None
 
-    def used_symbols(self) -> None:
-        return self.used
+    def used_variables(self) -> Counter:
+        return self.usedVariables
+    def used_functions(self) -> Counter:
+        return self.functions
+    def used_symbols(self) -> Counter :
+        return self.usedVariables + self.functions
     
-    def use_symbol(self,symbol) -> None:
-        self.used[symbol]+=1
+    def use_variables(self,symbol) -> None:
+        self.usedVariables[symbol]+=1
+    def use_functions(self,symbol) -> None:
+        self.usedFunctions[symbol]+=1
+    def use_symbols(self,symbol) -> None:
+        if symbol in self.variables:
+            self.usedVariables[symbol]+=1
+        else:
+            self.usedFunctions[symbol]+=1
     
     def is_declared(self,symbol) -> None:
-        return symbol in self.symbols
+        return symbol in self.variables or symbol in self.functions
+    def is_declared_variable(self,symbol) -> None:
+        return symbol in self.variables
+    def is_declared_function(self,symbol) -> None:
+        return symbol in self.functions
+    
     
     #elem is the whole declaration, not just the value
-    def declare_symbol(self,symbol,elem) -> None:
-        self.symbols[symbol]=elem
+    def declare_variable(self,decleration) -> None:
+        self.variables[decleration.variable]=decleration
+    def declare_function(self,name,elem) -> None:
+        self.functions[name]=elem
+        
+    def get_variable_declaration(self,symbol):
+        if symbol in self.variables: return self.variables[symbol]
+        else : return None
+    def get_funtion_declaration(self,symbol):
+        if symbol in self.functions: return self.functions[symbol]
+        else : return None
+    def get_symbol_declaration(self,symbol):
+        if symbol in self.variables: return self.variables[symbol]
+        elif symbol in self.functions: return self.functions[symbol]
+        else : return None
