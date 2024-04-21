@@ -23,7 +23,6 @@ class T(Transformer):
     def IDENTIFIER(self,token):
         return str(token)
     def INT(self,token):
-        print(token)
         return expressions.Value(int(token),types.INT())
     def CHAR(self,token):
         return expressions.Value(token,types.CHAR())
@@ -42,11 +41,12 @@ class T(Transformer):
     def constant(self,token):
         return token[0]
     def tuple(self,token):
-        return token #TODO
+        print(token)
+        return expressions.Tuple(token)
     def array(self,token):
-        return token #TODO
+        return expressions.Array(token)
     def list(self,token):
-        return token #TODO
+        return expressions.List(token)
     
     def OP0(self,token):
         return token
