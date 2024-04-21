@@ -119,8 +119,33 @@ class Program(Element):
     def isIf(self) -> bool:
         return len(self.instructions)==1 and type(self.instructions[0]) == If
 
+class FunctionArg(Element): 
+    def __init__(self, name: str, type: Type) -> None:
+        super().__init__()
+        self.name = name
+        self.type = type
+
+    def validate(self, context: Context) -> Iterator[Issue]:
+        yield from self.type.validate(context)
+        
+        if context.is_declared(self.name):
+            yield Issue(IssueType.Error, self, f"Redefinition of symbol '{self.name}'")
+        else:
+            context.declare_variable(Declaration(False, self.name, type, None))
+
+    def __eq__(self, obj) -> bool:
+        return type(self) == type(obj) \
+            and self.name == obj.name \
+            and self.type == obj.type
+
+    def __str__(self) -> str:
+        return f"{self.name}: {self.type}"
+    
+    def _toHTML(self, errors, depth=0) -> str:
+        return f'<span class="operator"><span class="variable">{self.name}</span> : {self.type.toHTML(errors)}</span>'
+
 class Function(Element):
-    def __init__(self, name: str, args: list[(str,Type)], returnType: Type, body: Program) -> None:
+    def __init__(self, name: str, args: list[FunctionArg], returnType: Type, body: Program) -> None:
         super().__init__()
         self.name = name
         self.args = args
@@ -128,18 +153,12 @@ class Function(Element):
         self.body = body
 
     def validate(self, context: Context) -> Iterator[Issue]:
-        for _,type in self.args:
-            yield from type.validate(context)
-
         if context.is_declared(self.name):
             yield Issue(IssueType.Error, self, f"Redefinition of symbol '{self.name}'")
 
         subcontext = Context(context,self.returnType)
-        for arg,type in self.args:
-            if subcontext.is_declared(arg):
-                yield Issue(IssueType.Error, self, f"Redefinition of symbol '{arg}'")
-            else:
-                subcontext.declare_variable(Declaration(False, arg, type, None))
+        for arg in self.args:
+            yield from arg.validate(subcontext)
 
         yield from self.body.validate(subcontext)
         context.declare_function(self)
@@ -155,15 +174,14 @@ class Function(Element):
     
     
     def __str__(self) -> str:
-        return f"func {self.name}({', '.join(f'{arg}: {type}' for arg,type in self.args)}): {self.returnType} {{\n{self.body}\n}}"
+        return f"func {self.name}({', '.join(self.args)}): {self.returnType} {{\n{self.body}\n}}"
     
     def _toHTML(self, errors, depth=0) -> str:
         s=f"""<span class="line" index={depth}></span><span class="control">func </span>"""
-        args = f"""<span class="encloser">({'<span class="operator">, </span>'.join(f'<span class="operator"><span class="variable">{arg}</span> : {type.toHTML(errors)}</span>' for arg,type in self.args)})</span>"""
+        args = f"""<span class="encloser">({'<span class="operator">, </span>'.join(arg.toHTML(errors) for arg in self.args)})</span>"""
         s += f"""<span class="function">{self.name}{args}</span>"""
-        if self.returnType:
-            s += f"""<span class="operator"> : </span>"""
-            s += self.returnType.toHTML(errors)
+        s += f"""<span class="operator"> : </span>"""
+        s += self.returnType.toHTML(errors)
         s += f"""<span class="line" index={depth}></span><span class="scope"> {{
 <br>{self.body.toHTML(errors,depth+1)}
 <br><span class="line" index={depth}></span>}}</span>"""

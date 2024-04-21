@@ -105,7 +105,7 @@ class BOOL(Primitive):
         return "true" if value else "false"
     
     def toHTMLInstance(self, value) -> str:
-        return f"""<span class="bool">'{"true" if value else "false"}'</span>"""
+        return f"""<span class="bool">{"true" if value else "false"}</span>"""
 
     def __str__(self):
         return 'bool'
