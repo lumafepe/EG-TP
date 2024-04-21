@@ -5,6 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Nested Spans Example</title>
     <style>
+        .container {
+            display: flex;
+        }
+        .column {
+            flex: 1;
+            padding: 20px;
+        }
         span {
             margin-top: 1px;
             margin-bottom: 1px;
@@ -89,8 +96,22 @@
         }
     </style>
 </head>
-{REPLACE}
 <body>
+    <div class="container">
+        <div class="column">
+            {REPLACE}
+        </div>
+        <div class="column">
+            <table border="1">
+                <tr>
+                <th>Counter</th>
+                <th>Value</th>
+                </tr>
+                {REPLACE_2}
+            </table>
+        </div>
+    </div>
+
     <script>
         // JavaScript to make the content dynamic
         const underlineSugestionElements = document.querySelectorAll('.sugestion');

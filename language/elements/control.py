@@ -48,7 +48,7 @@ class Declaration(Element):
         return f"{'const' if self.const else 'var'} {self.variable}{f': {self.valueType}' if self.valueType != None else ''}{f' = {self.value}' if self.value !=None else ''}"
     
     def _toHTML(self, errors, depth=0) -> str:
-        s = f"""<span class="control">{'const' if self.const else 'var'} </span>"""
+        s = f"""<span class="line" index={depth}></span><span class="control">{'const' if self.const else 'var'} </span>"""
         s += f"""<span class="variable">{self.variable}</span>"""
         if self.valueType:
             s += f"""<span class="operator"> : </span>"""
@@ -85,7 +85,8 @@ class Assignment(Element):
         return f"{str(self.dest)} = {str(self.value)}"
     
     def _toHTML(self, errors, depth=0) -> str:
-        s = self.dest.toHTML(errors)
+        s = f"""<span class="line" index={depth}></span>"""
+        s += self.dest.toHTML(errors)
         s += f"""<span class="operator"> = </span>"""
         s += self.value.toHTML(errors)
         return s
@@ -293,8 +294,8 @@ while ({str(self.condition)}) {{
         s=f"""<span class="line" index={depth}></span><span class="control">while </span>"""
         s += f"""<span class="encloser">({self.condition.toHTML(errors)}) </span>"""
         s += f"""<span class="scope"> {{
-{self.scope.toHTML(errors,depth+1)}
-<span class="line" index={depth}></span>}}</span>"""
+<br>{self.scope.toHTML(errors,depth+1)}
+<br><span class="line" index={depth}></span>}}</span>"""
         return s
             
 class Do_while(Element):

@@ -1,97 +1,62 @@
-import http.server
-import socketserver
-import webbrowser
+from flask import Flask
 import sys
-import time
-from watchdog.observers import Observer
-from watchdog.events import FileSystemEventHandler
 from parse import parse
-import threading
+from collections import Counter
+from language.issue import IssueType
 
 
-class MyHttpRequestHandler(http.server.SimpleHTTPRequestHandler):
-    html_content = None
-    
-    def __init__(self, *args, **kwargs):
-        MyHttpRequestHandler.html_content = kwargs.pop('html_content', None)
-        super().__init__(*args, **kwargs)
+def errorsTypes(counter,d):
+    for k,v in counter.items():
+        match k:
+            case IssueType.Warning:
+                d['NºWarnings']=v
+            case IssueType.Info:
+                d['NºSugestions']=v
+            case IssueType.Error:
+                d['NºErrors']=v
+    return d
 
-    def do_GET(self):
-        if self.html_content is not None:
-            self.send_response(200)
-            self.send_header("Content-type", "text/html")
-            self.end_headers()
-            self.wfile.write(MyHttpRequestHandler.html_content.encode())
-        else:
-            super().do_GET()
-
-# Function to start the server
-def start_server(html_content):
-    # Create a server instance
-    with socketserver.TCPServer(("", 80), lambda *args, **kwargs: MyHttpRequestHandler(html_content=html_content, *args, **kwargs)) as httpd:
-        print("Server started at localhost:80")
-        # Open browser to view the page
-        webbrowser.open("http://localhost:80")
-        # Serve the content indefinitely
-        httpd.serve_forever()
+def countersHTML(items):
+    s=""
+    for k,v in items.items():
+        s+=f"""<tr><td>{k}</td><td>{v}</td></tr>"""
+    return s
+        
     
 
 
-def getHTML(input_file):
-    with open(input_file) as f:
-        data = f.read()
-        linguagem, errors, maxDepth, counters, main_instructions = parse(data)
+class Myserver(Flask):
+    def __init__(self,name,input_file):
+        super().__init__(name)
+        self.input_file = input_file
+        
+    def getHTML(self):
+        with open(self.input_file) as f:
+            data = f.read()
+            linguagem, errors, maxDepth, counters, main_instructions = parse(data)
+            c = Counter()
+            for i in errors.values():
+                for j in i:
+                    c[j.valueType]+=1
+            values = errorsTypes(c,{})
+            values['Max loops depth'] = maxDepth
+            values['Main instructions'] = main_instructions
+            values.update(counters)
+            
+                    
 
-    with open('a.html') as f:
-        html = f.read().replace(r"{REPLACE}", linguagem.toHTML(errors))
-        return html
-
-
-class MyFileHandler(FileSystemEventHandler):
-    def __init__(self, file_path):
-        self.file_path = file_path
-        super().__init__()
-
-    def on_modified(self, event):
-        print("file")
-        if event.src_path == self.file_path:
-            with open(self.file_path) as f:
-                MyHttpRequestHandler.html_content = getHTML(self.file_path)
-
-
-def start_server_thread(html_content):
-    server_thread = threading.Thread(target=start_server, args=(html_content,))
-    server_thread.start()
-    return server_thread
-
-def watchdog_thread(input_file):
-    event_handler = MyFileHandler(input_file)
-    observer = Observer()
-    observer.schedule(event_handler, path='.', recursive=False)
-    observer.start()
-
-    try:
-        while True:
-            time.sleep(1)
-    except KeyboardInterrupt:
-        observer.stop()
-    observer.join()
+        with open('a.html') as f:
+            html = f.read().replace(r"{REPLACE}", linguagem.toHTML(errors))
+            html = html.replace(r"{REPLACE_2}", countersHTML(values))
+            return html
 
 
 
-def main():
-    if len(sys.argv) < 2:
-        print("Usage: python frontend.py <input_file>")
-        sys.exit(1)
-
-    input_file = sys.argv[1]
+app = Myserver(__name__,sys.argv[1])
     
-    t = start_server_thread(getHTML(input_file))
-
-    # Start the watchdog thread
-    watchdog_thread(input_file)
-    
-    t.join()
+@app.route('/')
+def serve_html():
+    return app.getHTML()
 
 if __name__ == '__main__':
-    main()
+    app.run(debug=True,port=80)
