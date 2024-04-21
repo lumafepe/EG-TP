@@ -21,7 +21,7 @@ class Context():
         self.usedVariables[symbol]+=1
     def use_functions(self,symbol) -> None:
         self.usedFunctions[symbol]+=1
-    def use_symbols(self,symbol) -> None:
+    def use_symbol(self,symbol) -> None:
         if symbol in self.variables:
             self.usedVariables[symbol]+=1
         else:

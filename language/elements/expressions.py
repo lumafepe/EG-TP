@@ -25,22 +25,22 @@ class Value(Expression):
     def __init__(self,value,valueType:Type):
         assert type(valueType) in [INT, BOOL, CHAR, STRING]
         self.value = value
-        self.type = valueType
+        self.valueType = valueType
 
     def kind(self) -> Kind:
         return Kind.Constant
     
     def type(self,context : Context) -> Type:
-        return self.type
+        return self.valueType
 
     def validate(self, context: Context) -> Iterator[Issue]:
         return []
     
     def __eq__(self, obj) -> bool:
-        return type(self) == type(obj) and self.type == obj.type and self.value == obj.value
+        return type(self) == type(obj) and self.valueType == obj.type and self.value == obj.value
 
     def __str__(self) -> str:
-        return self.type.printInstance(self.value)
+        return self.valueType.printInstance(self.value)
     
     
 class MultiValueExpression(Expression):
@@ -140,7 +140,7 @@ class Variable(Expression):
         context.use_symbol(self.symbol)
     
     def type(self, context: Context) -> Type:
-        return context.get_variable_declaration(self.symbol).type()
+        return context.get_variable_declaration(self.symbol).type(context)
         
     def __str__(self):
         return self.symbol

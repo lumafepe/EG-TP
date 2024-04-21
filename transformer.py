@@ -1,6 +1,6 @@
 from lark import Transformer
 
-from language.elements import types, expressions
+from language.elements import types, expressions,control
 
 from collections import Counter
 
@@ -41,7 +41,6 @@ class T(Transformer):
     def constant(self,token):
         return token[0]
     def tuple(self,token):
-        print(token)
         return expressions.Tuple(token)
     def array(self,token):
         return expressions.Array(token)
@@ -116,6 +115,8 @@ class T(Transformer):
     def op_indexation(self,token):
         return expressions.Or(token[0],token[2])#TODO
 
+    def variable(self,token):
+        return expressions.Variable(token[0])
     
     def expression(self,token):
         return token[0]
@@ -124,14 +125,23 @@ class T(Transformer):
         return token
     def declaration(self,token):
         self.counter['declaration']+=1
-        return token #TODO
+        const = token[0]=='const'
+        return control.Declaration(const,token[1],token[2],None)
     def assignment(self,token): 
         self.counter['assignment']+=1
-        return token #TODO
+        return control.Assignment(token[0],token[1])
     def decl_ass(self,token):
         self.counter['declaration']+=1
         self.counter['assignment']+=1
-        return token #TODO
+        const = token[0]=='const'
+        data=None
+        typ=None
+        if isinstance(token[2],types.Type):
+            typ=token[2]
+            data=token[3]
+        else:
+            data=token[2]
+        return control.Declaration(const,token[1],typ,data)
 
     def scope(self,token):
         return token #TODO
@@ -152,13 +162,13 @@ class T(Transformer):
         return token #TODO
     def function_call(self,token):
         self.counter['function_call']+=1
-        return token #TODO
+        return expressions.Function_call(token[0],token[1:])
     def func_return(self,token):
         return token #TODO
     
     def program(self,token):
         self.counter['main_instructions']+=1
-        return token #TODO
+        return control.Program(token)
     
         
         

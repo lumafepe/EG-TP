@@ -1,6 +1,7 @@
 from lark import Lark
 import sys
 from transformer import T
+from language.context import Context
 
 
 #const_tuple: "(" ( (constant ",")+ constant? | constant "," | ) ")"
@@ -71,8 +72,9 @@ lark_parser = r"""
     _exp9: _exp_base | op_indexation
     op_indexation: _exp9 "[" expression "]"
 
+    variable : IDENTIFIER
     _exp_base: constant
-        | IDENTIFIER
+        | variable
         | tuple
         | array
         | list
@@ -107,10 +109,16 @@ lark_parser = r"""
 
 
 input = """
+var a : int;
+const b : int = 5;
+const c = 55;
+a= '1'; 
 """
 
 
-p = Lark(lark_parser,start="array") # cria um objeto parser
+p = Lark(lark_parser,start="program") # cria um objeto parser
 tree = p.parse(input)  # retorna uma tree
 linguagem = T().transform(tree)
+a=list(linguagem.validate(Context()))
+print(a)
 print(linguagem)

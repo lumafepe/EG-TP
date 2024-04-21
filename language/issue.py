@@ -11,6 +11,10 @@ class IssueType(Enum):
 
 class Issue:
     def __init__(self, type: IssueType, elem, msg: str) -> None:
-        self.type = type
+        self.valueType = type
         self.elem = elem
         self.msg = msg
+    def __str__(self) -> str:
+        return self.msg
+    def __repr__(self) -> str:
+        return str(self)
