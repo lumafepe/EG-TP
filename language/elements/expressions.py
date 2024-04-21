@@ -43,24 +43,87 @@ class Value(Expression):
 
     def __str__(self) -> str:
         return self.type.printInstance(self.value)
-
-class Tuple(Expression):
-    def __init__(self, operator: str, operands: list[Expression], allowedTypes: list[Type]) -> None:
-        pass
-
-    def kind(self) -> Kind:
-        pass
-
-    def validate(self, context: Context) -> Iterator[Issue]:
-        pass
-
-    def __eq__(self, obj: object) -> bool:
-        pass
+    
+    
+class MultiValueExpression(Expression):
+    def __init__(self, values: list[Expression],stringOpener:str,stringCloser:str) -> None:
+        self.values = values
+        self.stringOpener = stringOpener
+        self.stringCloser = stringCloser
     
     def __str__(self) -> str:
-        pass
+        return self.stringOpener+', '.join(str(s) for s in self.values) + self.stringCloser
+    
+    def __eq__(self, obj: object) -> bool:
+        return type(self) == type(obj) and len(self.values) == len(obj.values) and all(a==b for a,b in zip(self.values,obj.values))
+
+    def kind(self) -> Kind:
+        if all(t.kind() == Kind.Constant for t in self.values):
+            return Kind.Constant
+        else:
+            return Kind.Literal
+        
+    def validate(self, context: Context) -> Iterator[Issue]:
+        for o in self.values:
+            yield from o.validate(context)
+
+
+class UniTypeMultiValueExpression(MultiValueExpression):
+    def getBiggerType(self):
+        bigger_type = self.values[0].type()
+        for o in self.values:
+            if not bigger_type.isAssignableFrom(o.type()):
+                if o.type().isAssignableFrom(bigger_type):
+                    bigger_type = o.type()
+        return bigger_type
+
+class Tuple(MultiValueExpression):
+    def __init__(self, values: list[Expression], stringOpener: str, stringCloser: str) -> None:
+        super().__init__(values, '(' , ')')
+
+    def validate(self, context: Context) -> Iterator[Issue]:
+        yield from super().validate(context)
+        if len(self.values) :
+            yield Issue(IssueType.Error,self, "TypeError. TODO: make cool messages")
+        
+
     def type(self) -> Type:
-        return super().type()
+        return TUPLE([t.type() for t in self.values])
+
+class Array(UniTypeMultiValueExpression):
+    def __init__(self, values: list[Expression], stringOpener: str, stringCloser: str) -> None:
+        super().__init__(values, '[' , ']')
+
+    def validate(self, context: Context) -> Iterator[Issue]:
+        yield from super().validate(context)
+        bigger_type = self.values[0].type()
+        for o in self.values:
+            if not bigger_type.isAssignableFrom(o.type()):
+                if o.type().isAssignableFrom(bigger_type):
+                    bigger_type = o.type()
+                else:
+                    yield Issue(IssueType.Error,self, "TypeError. TODO: make cool messages")
+
+    def type(self) -> Type:
+        return ARRAY(self.getBiggerType())
+    
+class List(UniTypeMultiValueExpression):
+    def __init__(self, values: list[Expression], stringOpener: str, stringCloser: str) -> None:
+        super().__init__(values, '<' , '>')
+
+    def validate(self, context: Context) -> Iterator[Issue]:
+        yield from super().validate(context)
+        bigger_type = self.values[0].type()
+        for o in self.values:
+            if not bigger_type.isAssignableFrom(o.type()):
+                if o.type().isAssignableFrom(bigger_type):
+                    bigger_type = o.type()
+                else:
+                    yield Issue(IssueType.Error,self,"TypeError. TODO: make cool messages")
+
+    def type(self) -> Type:
+        return LIST(self.getBiggerType())
+
 
 
 
