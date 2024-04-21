@@ -109,9 +109,17 @@ lark_parser = r"""
 
 
 input = """
-func ola(i:int,o:string) : int {
-    return 2;
+func ola(i:int,o:char) : int {
+    if (i == o) {
+        return 2;
+    } elif (i<o){
+        return 3;
+    } else{
+        return 4;
+    }
 }
+
+var a : int = ola(1,'a');
 """
 
 
@@ -121,3 +129,6 @@ linguagem = T().transform(tree)
 a=list(linguagem.validate(Context()))
 print(a)
 print(linguagem)
+with open('a.html') as f:
+    with open('b.html','w') as f1:
+        f1.write(f.read().replace(r"{REPLACE}",linguagem.toHTML(a)))

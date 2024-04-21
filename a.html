@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nested Spans Example</title>
+    <style>
+        html, body {
+            background-color: rgb(36, 34, 46);
+            color: white; 
+        }
+        .spacer {
+            margin-left: 20px;
+        }
+        .type {
+            color: rgb(45, 196, 28);
+            white-space: pre-line;
+        }
+        .variable {
+            color: rgb(31, 171, 198);
+            white-space: pre-line;
+        }
+        .control {
+            color: rgb(196, 32, 157);
+            white-space: pre-line;
+        }
+        .text {
+            color: rgb(254, 151, 25);
+            white-space: pre-line;
+        }
+        .number {
+            color: rgb(22, 84, 9);
+            white-space: pre-line;
+        }
+        .operator {
+            color: rgb(255, 255, 255);
+            white-space: pre-line;
+        }
+        .function {
+            color: rgb(233, 235, 125);
+            white-space: pre-line;
+        }
+        .encloser {
+            color: rgb(251, 255, 0);
+            white-space: pre-line;
+        }
+        .sugestion {
+            position: relative;
+            text-decoration: underline blue;
+        }
+        .sugestion:hover::after {
+            content: attr(message);
+            position: absolute;
+            top: 100%;
+            left: 0;
+            background-color: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 5px;
+            border-radius: 5px;
+            white-space: nowrap;
+        }
+        .warning {
+            position: relative;
+            text-decoration: underline yellow;
+        }
+        .warning:hover::after {
+            content: attr(message);
+            position: absolute;
+            top: 100%;
+            left: 0;
+            background-color: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 5px;
+            border-radius: 5px;
+            white-space: nowrap;
+        }
+        .error {
+            position: relative;
+            text-decoration: underline red;
+        }
+        .error:hover::after {
+            content: attr(message);
+            position: absolute;
+            top: 100%;
+            left: 0;
+            background-color: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 5px;
+            border-radius: 5px;
+            white-space: nowrap;
+        }
+    </style>
+</head>
+{REPLACE}
+<body>
+    <script>
+        // JavaScript to make the content dynamic
+        const underlineSugestionElements = document.querySelectorAll('.sugestion');
+
+        underlineSugestionElements.forEach(element => {
+            const message = element.getAttribute('message');
+            element.setAttribute('message', message); // Set the data-message attribute
+        });
+
+        const underlineWarningElements = document.querySelectorAll('.warning');
+
+        underlineWarningElements.forEach(element => {
+            const message = element.getAttribute('message');
+            element.setAttribute('message', message); // Set the data-message attribute
+        });
+
+        const underlineErrorElements = document.querySelectorAll('.error');
+
+        underlineErrorElements.forEach(element => {
+            const message = element.getAttribute('message');
+            element.setAttribute('message', message); // Set the data-message attribute
+        });
+    </script>
+</body>
+</html>

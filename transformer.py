@@ -29,10 +29,10 @@ class T(Transformer):
         return expressions.Value(int(token), types.INT())
 
     def CHAR(self, token):
-        return expressions.Value(token, types.CHAR())
+        return expressions.Value(token[1:-1], types.CHAR())
 
     def STRING(self, token):
-        return expressions.Value(token, types.STRING())
+        return expressions.Value(token[1:-1], types.STRING())
 
     def tuple_type(self, token):
         return types.TUPLE(token)

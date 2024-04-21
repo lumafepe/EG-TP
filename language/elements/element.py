@@ -18,3 +18,7 @@ class Element(ABC):
     
     def __repr__(self) -> str:
         return str(self)
+    
+    @abstractmethod
+    def toHTML(self, errors) -> str:
+        pass

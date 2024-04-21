@@ -42,6 +42,9 @@ class Value(Expression):
     def __str__(self) -> str:
         return self.valueType.printInstance(self.value)
     
+    def toHTML(self, errors) -> str:
+        return self.valueType.toHTMLInstance(self.value)
+    
     
 class MultiValueExpression(Expression):
     def __init__(self, values: list[Expression],stringOpener:str,stringCloser:str) -> None:
@@ -51,6 +54,10 @@ class MultiValueExpression(Expression):
     
     def __str__(self) -> str:
         return self.stringOpener+', '.join(str(s) for s in self.values) + self.stringCloser
+    
+    def toHTML(self, errors) -> str:
+        return f"""<span class="encloser">{self.stringOpener}{'<span class="operator">, </span>'.join(s.toHTML(errors) for s in self.values)}{self.stringCloser}</span>"""
+        
     
     def __eq__(self, obj: object) -> bool:
         return type(self) == type(obj) and len(self.values) == len(obj.values) and all(a==b for a,b in zip(self.values,obj.values))
@@ -131,6 +138,10 @@ class Variable(Expression):
     def __str__(self):
         return self.symbol
     
+    def toHTML(self, errors) -> str:
+        return f"""<span class="variable">{self.symbol}</span>"""
+    
+    
 class Function_call(Expression):
     def __init__(self,name : str,args : list[Expression]) -> None:
         self.name = name
@@ -162,8 +173,13 @@ class Function_call(Expression):
     def __str__(self) -> str :
         return self.name +'('+' ,'.join(str(t) for t in self.args) +')'
     
+    def toHTML(self, errors) -> str:
+        args = f"""<span class="encloser">({'<span class="operator">, </span>'.join(t.toHTML(errors) for t in self.args)})</span>"""
+        return f"""<span class="function">{self.name}{args}</span>"""
+        
+    
     def type(self, context: Context) -> Type:
-        return context.get_funtion_declaration(self.symbol).returnType
+        return context.get_funtion_declaration(self.name).returnType
 
 
 #Assumes all operands are of the same type, or are assignable to the same type
@@ -204,7 +220,12 @@ class UnaryOperation(Operation):
         return self.operands[0]
     
     def __str__(self) -> bool:
-        return f"{self.operand()}{self.operator}" if self.suffixed else f"{self.operator}{self.operand()}"
+        return f"{self.operator}{str(self.operand())}"
+    
+    def toHTML(self, errors) -> str:
+        s =  f"""<span class="operator">{self.operator}</span>"""
+        s += self.operand().toHTML(errors)
+        return s
 
 
 class BinaryOperation(Operation):
@@ -218,7 +239,13 @@ class BinaryOperation(Operation):
         return self.operands[1]
 
     def __str__(self) -> bool:
-        return f"{self.lterm()} {self.operator} {self.rterm()}"
+        return f"{str(self.lterm())} {self.operator} {str(self.rterm())}"
+    
+    def toHTML(self, errors) -> str:
+        s = self.lterm().toHTML(errors)
+        s +=  f"""<span class="operator">{self.operator}</span>"""
+        s += self.rterm().toHTML(errors)
+        return s
 
 class BooleanBinaryOperation(BinaryOperation):
     def type(self,context : Context) -> Type:
@@ -334,6 +361,13 @@ class ArrayIndex(Expression):
     def __str__(self) -> str:
         return f"{self.array}[{self.index}]"
 
+    def toHTML(self, errors) -> str:
+        s = self.array.toHTML(errors)
+        s += """<span class="operator">[</span>"""
+        s += self.index.toHTML(errors)
+        s += """<span class="operator">]</span>"""
+        return s
+
 class TupleIndex(Expression):
     def __init__(self, tuple: Expression, index: int) -> None:
         self.tuple = tuple
@@ -354,3 +388,8 @@ class TupleIndex(Expression):
     
     def __str__(self) -> str:
         return f"{self.tuple}#{self.index}"
+    
+    def toHTML(self, errors) -> str:
+        s = self.tuple.toHTML(errors)
+        s += f"""<span class="operator">#{self.index}</span>"""
+        return s

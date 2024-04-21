@@ -13,6 +13,10 @@ class Type(Element):
     @abstractmethod
     def printInstance(self, value) -> str:
         pass
+    
+    @abstractmethod
+    def toHTMLInstance(self, value) -> str:
+        pass
 
     @abstractmethod
     def __eq__(self, other: object):
@@ -32,6 +36,10 @@ class Type(Element):
 class Primitive(Type):
     def __eq__(self, other):
         return type(self) == type(other)
+    
+    def toHTML(self, errors) -> str:
+        s = f"""<span class="type">{str(self)}</span>"""
+        return s
 
 class INT(Primitive):
     def isAssignableFrom(self, other: Type) -> bool:
@@ -39,6 +47,9 @@ class INT(Primitive):
     
     def printInstance(self, value) -> str:
         return str(value)
+    
+    def toHTMLInstance(self, value) -> str:
+        return f"""<span class="number">{str(value)}</span>"""
 
     def __str__(self):
         return 'int'
@@ -49,6 +60,9 @@ class STRING(Primitive):
     
     def printInstance(self, value) -> str:
         return f'"{value}"'
+    
+    def toHTMLInstance(self, value) -> str:
+        return f"""<span class="text">"{value}"</span>"""
 
     def __str__(self):
         return 'string'
@@ -60,6 +74,9 @@ class CHAR(Primitive):
     def printInstance(self, value) -> str:
         return f"'{value}'"
     
+    def toHTMLInstance(self, value) -> str:
+        return f"""<span class="text">'{value}'</span>"""
+    
     def __str__(self):
         return 'char'
 
@@ -69,6 +86,9 @@ class BOOL(Primitive):
     
     def printInstance(self, value) -> str:
         return "true" if value else "false"
+    
+    def toHTMLInstance(self, value) -> str:
+        return f"""<span class="bool">'{"true" if value else "false"}'</span>"""
 
     def __str__(self):
         return 'bool'
@@ -85,12 +105,19 @@ class TUPLE(Type):
 
     def printInstance(self, value) -> str:
         return f"({', '.join(t.printInstance(v) for t,v in zip(self.tupled, value))})"
+    
+    def toHTMLInstance(self, value) -> str:
+        return f"""<span class="encloser">({'<span class="operator">, </span>'.join(t.toHTMLInstance(v) for t,v in zip(self.tupled, value))})</span>"""
+
 
     def __eq__(self, other):
         return type(self) == type(other) and self.tupled == other.tupled
 
     def __str__(self):
         return f"({', '.join(self.tupled)})"
+
+    def toHTML(self, errors) -> str:
+        return f"""<span class="encloser">({'<span class="operator">, </span>'.join(tip.toHTML(errors) for tip in self.tupled)})</span>"""
 
 class Container(Type):
     def __init__(self, contained: Type) -> None:
@@ -102,6 +129,7 @@ class Container(Type):
 
     def __eq__(self, other):
         return type(self) == type(other) and self.contained == other.contained
+    
 
 class ARRAY(Container):
     def __str__(self):
@@ -109,6 +137,15 @@ class ARRAY(Container):
     
     def printInstance(self, value) -> str:
         return f"[{', '.join(self.contained.printInstance(v) for v in value)}]"
+    
+    def toHTMLInstance(self, value) -> str:
+        return f"""<span class="encloser">[{'<span class="operator">, </span>'.join(self.contained.toHTMLInstance(v) for v in value)}]</span>"""
+
+    
+    def toHTML(self, errors) -> str:
+        return f"""<span class="encloser">[{self.contained.toHTML(errors)}]"""
+    
+    
 
 class LIST(Container):
     def __str__(self):
@@ -116,3 +153,10 @@ class LIST(Container):
     
     def printInstance(self, value) -> str:
         return f"<{', '.join(self.contained.printInstance(v) for v in value)}>"
+    
+    def toHTMLInstance(self, value) -> str:
+        return f"""<span class="encloser"><{'<span class="operator">, </span>'.join(self.contained.toHTMLInstance(v) for v in value)}></span>"""
+
+    
+    def toHTML(self, errors) -> str:
+        return f"""<span class="encloser"><{self.contained.toHTML(errors)}>"""

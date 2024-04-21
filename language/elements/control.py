@@ -3,7 +3,7 @@ from .element import Element
 from .expressions import Expression, Kind
 from .types import Type,BOOL
 from ..context import Context
-from ..issue import Issue, IssueType
+from ..issue import Issue, IssueType, TypeError
 
 
 class Declaration(Element):
@@ -46,6 +46,22 @@ class Declaration(Element):
     def __str__(self) -> str:
         return f"{'const' if self.const else 'var'} {self.variable}{f': {self.valueType}' if self.valueType != None else ''}{f' = {self.value}' if self.value !=None else ''}"
     
+    def toHTML(self, errors) -> str:
+        s=""
+        s += f"""<span class="control">{'const' if self.const else 'var'} </span>"""
+        s += f"""<span class="variable">{self.variable}</span>"""
+        if self.valueType:
+            s += f"""<span class="operator"> : </span>"""
+            s += self.valueType.toHTML(errors)
+        if self.value:
+            s += f"""<span class="operator"> = </span>"""
+            s += self.value.toHTML(errors)
+        return s
+        
+            
+        
+        
+    
 
 class Assignment(Element):
     def __init__(self, dest: Expression, value: Expression) -> None:
@@ -65,7 +81,13 @@ class Assignment(Element):
         return type(self) == type(obj) and self.dest == obj.dest and self.value == obj.value
 
     def __str__(self) -> str:
-        return f"{self.dest} = {self.value}"
+        return f"{str(self.dest)} = {str(self.value)}"
+    
+    def toHTML(self, errors) -> str:
+        s = self.dest.toHTML(errors)
+        s += f"""<span class="operator"> = </span>"""
+        s += self.value.toHTML(errors)
+        return s
 
 
 class Program(Element):
@@ -85,6 +107,10 @@ class Program(Element):
         semicolon = lambda x: '' if any(isinstance(x,c) for c in [If,While,Function,Do_while]) else ';'
         return '\n'.join((str(o) + semicolon(o)) for o in self.instructions)
     
+    def toHTML(self, errors) -> str:
+        semicolon = lambda x: '' if any(isinstance(x,c) for c in [If,While,Function,Do_while]) else '<span class="operator">;</span>'
+        return '\n'.join((o.toHTML(errors) + semicolon(o)) for o in self.instructions)
+    
     def isIf(self) -> bool:
         return len(self.instructions)==1 and type(self.instructions[0]) == If
 
@@ -103,7 +129,6 @@ class Function(Element):
             yield Issue(IssueType.Error, self, f"Redefinition of symbol '{self.name}'")
 
         subcontext = Context(context,self.returnType)
-
         for arg,type in self.args:
             if subcontext.is_declared(arg):
                 yield Issue(IssueType.Error, self, f"Redefinition of symbol '{arg}'")
@@ -122,7 +147,19 @@ class Function(Element):
     
     def __str__(self) -> str:
         return f"func {self.name}({', '.join(f'{arg}: {type}' for arg,type in self.args)}): {self.returnType} {{\n{self.body}\n}}"
-
+    
+    def toHTML(self, errors) -> str:
+        s=f"""<span class="control">func </span>"""
+        args = f"""<span class="encloser">({'<span class="operator">, </span>'.join(f'<span class="operator"><span class="variable">{arg}</span> : {type.toHTML(errors)}</span>' for arg,type in self.args)})</span>"""
+        s += f"""<span class="function">{self.name}{args}</span>"""
+        if self.returnType:
+            s += f"""<span class="operator"> : </span>"""
+            s += self.returnType.toHTML(errors)
+        s += f"""<span class="encloser">
+{{
+<span class="spacer">{self.body.toHTML(errors)}</span>
+}}</span>"""
+        return s
 
 class Return(Element):
     def __init__(self, exp: Expression) -> None:
@@ -138,6 +175,10 @@ class Return(Element):
 
     def __str__(self) -> str:
         return f"return {str(self.value)}"
+    
+    def toHTML(self, errors) -> str:
+        s=f"""<span class="control">return {self.value.toHTML(errors)}</span>"""
+        return s
     
     def __eq__(self, obj) -> bool:
          return type(self) == type(obj) \
@@ -184,6 +225,24 @@ class If(Element):
     {str(self.elseScope)}
 }}"""
         return s
+    
+    def toHTML(self, errors) -> str:
+        s=f"""<span class="control">if </span>"""
+        s += f"""<span class="encloser">({self.condition.toHTML(errors)}) </span>"""
+        s += f"""<span class="encloser">
+{{
+<span class="spacer">{self.ifScope.toHTML(errors)}</span>
+}}</span>"""
+        if self.hasElse():
+            if self.elseScope.isIf():
+                s+=f"""<span class="control">el</span>{self.elseScope.toHTML(errors)}"""
+            else:
+                s+=f"""<span class="control">else </span>"""
+                s+=f"""<span class="encloser">
+{{
+<span class="spacer">{self.ifScope.toHTML(errors)}</span>
+}}</span>"""
+        return s
 
 class While(Element):
     def __init__(self, condition:Expression, scope: Program) -> None:
@@ -208,6 +267,14 @@ class While(Element):
 while ({str(self.condition)}) {{
     {str(self.scope)}
 }}"""
+    def toHTML(self, errors) -> str:
+        s=f"""<span class="control">while </span>"""
+        s += f"""<span class="encloser">({self.condition.toHTML(errors)}) </span>"""
+        s += f"""<span class="encloser">
+{{
+{self.scope.toHTML(errors)}
+}}</span>"""
+        return s
             
 class Do_while(Element):
     def __init__(self, condition:Expression, scope: Program) -> None:
@@ -232,3 +299,13 @@ class Do_while(Element):
 do {{
     {str(self.scope)}
 }} while ({str(self.condition)})"""
+
+    def toHTML(self, errors) -> str:
+        s = f"""<span class="control">do </span>"""
+        s += f"""<span class="encloser">
+{{
+{self.scope.toHTML(errors)}
+}}</span>"""
+        s += f"""<span class="control">while </span>"""
+        s += f"""<span class="encloser">({self.condition.toHTML(errors)}) </span>"""
+        return s
