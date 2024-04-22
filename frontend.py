@@ -1,8 +1,10 @@
 from flask import Flask
 import sys
 from parse import parse
-from collections import Counter
+from collections import Counter,defaultdict
 from language.issue import IssueType
+from bs4 import BeautifulSoup
+
 
 
 def errorsTypes(counter,d):
@@ -22,7 +24,29 @@ def countersHTML(items):
         s+=f"""<tr><td>{k}</td><td>{v}</td></tr>"""
     return s
         
+
+
+def editMessages(messages,index):
+    isClass = lambda x: x in ["error","sugestion","warning"]
+    submessages = messages.find_all("span", class_=isClass)
+    outermessages = list(filter(lambda message: message.find_all("span", class_=isClass) ,submessages))
+    s=set()
+    for message in list(outermessages):
+        message['index']=index
+        s.add(message.get('id')[0])
+        d = editMessages(message,index+1)
+        s = s.union(d)
+    for message in submessages:
+        if message.get('id')[0] not in s:
+            message['index']=index
+            s.add(message.get('id')[0])
+    return s
+
+def join_messages(html):
+    soup = BeautifulSoup(html, 'html.parser')
     
+    editMessages(soup,0)
+    return str(soup)
 
 
 class Myserver(Flask):
@@ -42,11 +66,12 @@ class Myserver(Flask):
             values['Max loops depth'] = maxDepth
             values['Main instructions'] = main_instructions
             values.update(counters)
+            HTML =linguagem.toHTML(errors)
             
                     
 
         with open('a.html') as f:
-            html = f.read().replace(r"{REPLACE}", linguagem.toHTML(errors))
+            html = f.read().replace(r"{REPLACE}", join_messages(HTML))
             html = html.replace(r"{REPLACE_2}", countersHTML(values))
             return html
 
@@ -59,4 +84,4 @@ def serve_html():
     return app.getHTML()
 
 if __name__ == '__main__':
-    app.run(debug=True,port=80)
+    app.run(debug=True,port=80,extra_files=[sys.argv[1],'a.html'])

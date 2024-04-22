@@ -36,6 +36,6 @@ class Element(ABC):
             for typ,clas in [(IssueType.Error,"error"),(IssueType.Warning,"warning"),(IssueType.Info,"sugestion")]:
                 for error in objErrors:
                     if error.valueType == typ:
-                        return f"""<span class="{clas}" message="{error.msg}">{self._toHTML(errors,depth)}</span>"""
+                        return f"""<span id="{self.id}" class="{clas}" message="{error.msg}">{self._toHTML(errors,depth)}</span>"""
         else: return self._toHTML(errors,depth)
         
