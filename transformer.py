@@ -88,7 +88,7 @@ class T(Transformer):
         return token
 
     def OP8(self, token):
-        return token
+        return int(token[1:])
 
     def op_or(self, token):
         return expressions.Or(token[0], token[2])
@@ -143,10 +143,10 @@ class T(Transformer):
                 return expressions.Length(token[1])
 
     def op_element(self, token):
-        return expressions.Or(token[0], token[2])
+        return expressions.TupleIndex(token[0], token[1])
 
     def op_indexation(self, token):
-        return expressions.Or(token[0], token[2])
+        return expressions.ArrayIndex(token[0], token[1])
 
     def variable(self, token):
         return expressions.Variable(token[0])

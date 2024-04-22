@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 from enum import Enum
 from .element import Element
 from ..context import Context
-from typing import Iterator
+from typing import Iterator, Optional
 from ..issue import Issue
 class Type(Element):
     def __init__(self) -> None:
@@ -111,15 +111,17 @@ class BOOL(Primitive):
         return 'bool'
 
 class TUPLE(Type):
-    def __init__(self, tupled: list[Type]):
+    def __init__(self, tupled: Optional[list[Type]]):
         super().__init__()
-        assert len(tupled) >= 2
+        assert tupled == None or len(tupled) >= 2
         self.tupled = tupled
 
     def isAssignableFrom(self, other: Type) -> bool:
         return isinstance(other, TUPLE) \
-            and len(self.tupled) == len(other.tupled) \
-            and all(a.isAssignableFrom(b) for a,b in zip(self.tupled,other.tupled))
+            and (self.tupled == None or (
+                len(self.tupled) == len(other.tupled) \
+                and all(a.isAssignableFrom(b) for a,b in zip(self.tupled,other.tupled)) \
+            ))
 
     def printInstance(self, value) -> str:
         return f"({', '.join(t.printInstance(v) for t,v in zip(self.tupled, value))})"
@@ -132,19 +134,19 @@ class TUPLE(Type):
         return type(self) == type(other) and self.tupled == other.tupled
 
     def __str__(self):
-        return f"({', '.join(self.tupled)})"
+        return f"({', '.join(str(t) for t in self.tupled)})"
 
     def _toHTML(self, errors, depth=0) -> str:
         return f"""<span class="encloser">({'<span class="operator">, </span>'.join(tip.toHTML(errors) for tip in self.tupled)})</span>"""
 
 class Container(Type):
-    def __init__(self, contained: Type) -> None:
+    def __init__(self, contained: Optional[Type]) -> None:
         super().__init__()
         self.contained = contained
 
     def isAssignableFrom(self, other: Type) -> bool:
         return type(self) == type(other) \
-            and self.contained.isAssignableFrom(other.contained)
+            and (self.contained == None or self.contained.isAssignableFrom(other.contained))
 
     def __eq__(self, other):
         return type(self) == type(other) and self.contained == other.contained

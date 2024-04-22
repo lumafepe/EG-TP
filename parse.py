@@ -137,7 +137,7 @@ def parse(input):
     for i in linguagem.validate(c):
         errors[i.elem.id].add(i)
 
-    maxDepth = c.maxLoops
+    maxDepth = c.stats.maxLoops
     counters = transformer.counter
     main_instructions = len(linguagem.instructions)
     return (linguagem,errors,maxDepth,counters,main_instructions)

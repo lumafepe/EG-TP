@@ -1,11 +1,12 @@
-func ola(i:int,i:char) : int {
+func ola(i:int,o:char) : int {
     if (i == o) {
         if (o >= i ){ return 7;}
     } elif (i<o){
         return 8;
     } else{
-        return true;
+        const x = [1,2,3];
+        return x[1];
     }
 }
 
-var a : int = ola("a",'a');
+var a : int = ola(2,'a');

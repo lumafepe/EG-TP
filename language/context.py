@@ -1,4 +1,14 @@
+from __future__ import annotations
 from collections import Counter
+
+
+class Stats():
+    def __init__(self):
+        self.maxLoops = 0
+
+    def mergeWith(self, stats: Stats, isLoop: bool = False):
+        self.maxLoops = max(self.maxLoops, stats.maxLoops + (1 if isLoop else 0))
+
 
 class Context():
     def __init__(self,parent=None,returnType=None):
@@ -7,7 +17,7 @@ class Context():
         self.usedVariables = Counter()
         self.usedFunctions = Counter()
         self.returnType = returnType
-        self.maxLoops = 0
+        self.stats = Stats()
 
     def in_global_scope(self) -> bool:
         return self.parent is None

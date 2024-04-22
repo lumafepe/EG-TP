@@ -41,7 +41,7 @@ class Value(Expression):
     
     def __eq__(self, obj) -> bool:
         return type(self) == type(obj) \
-            and self.valueType == obj.type \
+            and self.valueType == obj.valueType \
                 and self.value == obj.value
                 
     
@@ -87,17 +87,19 @@ class MultiValueExpression(Expression):
 class UniTypeMultiValueExpression(MultiValueExpression):
     def getBiggerType(self,context):
         bigger_type = self.values[0].type(context)
-        for o in self.values:
-            if not bigger_type.isAssignableFrom(o.type(context)):
-                if o.type(context).isAssignableFrom(bigger_type):
-                    bigger_type = o.type(context)
+        for v in self.values:
+            vType = v.type(context)
+            if bigger_type == None:
+                bigger_type = vType
+            elif vType != None and not bigger_type.isAssignableFrom(vType) and vType.isAssignableFrom(bigger_type):
+                bigger_type = vType
         return bigger_type
     
     def validate(self, context: Context) -> Iterator[Issue]:
         yield from super().validate(context)
         bigger_type = self.getBiggerType(context)
         for o in self.values:
-            TypeError.check(o, bigger_type, context)
+            yield from TypeError.check(o, bigger_type, context)
 
 class Tuple(MultiValueExpression):
     def __init__(self, values: list[Expression]) -> None:
@@ -106,7 +108,7 @@ class Tuple(MultiValueExpression):
     def validate(self, context: Context) -> Iterator[Issue]:
         yield from super().validate(context)
         if len(self.values) < 2:
-            yield Issue(IssueType.Error,self, "TODO: make cool messages")
+            yield Issue(IssueType.Error,self, "Tuples with less than two elements aren't allowed")
         
 
     def type(self, context: Context) -> Optional[Type]:
@@ -211,11 +213,13 @@ class Function_call(Expression):
 
 #Assumes all operands are of the same type, or are assignable to the same type
 class Operation(Expression):
-    def __init__(self, operator: str, operands: list[Expression], allowedTypes: list[Type]) -> None:
+    def __init__(self, operator: str, operands: list[Expression], allowedTypes: list[type]) -> None:
         super().__init__()
         self.operator = operator
         self.operands = operands
         self.allowedTypes = allowedTypes
+        for t in allowedTypes:
+            assert issubclass(t, Type)
 
     def kind(self, context: Context) -> Optional[Kind]:
         return Kind.Constant if all(o.kind(context) == Kind.Constant for o in self.operands) else Kind.Literal
@@ -223,17 +227,27 @@ class Operation(Expression):
     def getBiggerType(self,context):
         bigger_type = self.operands[0].type(context)
         for o in self.operands:
-            if not bigger_type.isAssignableFrom(o.type(context)) and o.type(context).isAssignableFrom(bigger_type):
-                    bigger_type = o.type(context)
+            oType = o.type(context)
+            if bigger_type == None:
+                bigger_type = oType
+            elif oType != None and not bigger_type.isAssignableFrom(oType) and oType.isAssignableFrom(bigger_type):
+                bigger_type = oType
         return bigger_type
 
     def validate(self, context: Context) -> Iterator[Issue]:
         for o in self.operands:
             yield from o.validate(context)
-        
-        bigger_type = self.operands[0].type(context)
+
+        allAllowed = True
         for o in self.operands:
-            TypeError.check(o, bigger_type, context)
+            oType = o.type(context)
+            if oType != None and all(not isinstance(oType, t) for t in self.allowedTypes):
+                yield Issue(IssueType.Error, o, f"Invalid operand of type {oType} for operator {self.operator}")
+                allAllowed = False
+        
+        if allAllowed:
+            for o in self.operands:
+                yield from TypeError.check(o, self.getBiggerType(context), context)
 
     def __eq__(self, obj: object) -> bool:
         return type(self) == type(obj) \
@@ -242,7 +256,7 @@ class Operation(Expression):
 
 
 class UnaryOperation(Operation):
-    def __init__(self, operator: str, operand: Expression, allowedTypes: list[Type]) -> None:
+    def __init__(self, operator: str, operand: Expression, allowedTypes: list[type]) -> None:
         super().__init__(operator, [operand], allowedTypes)
 
     def operand(self):
@@ -258,7 +272,7 @@ class UnaryOperation(Operation):
 
 
 class BinaryOperation(Operation):
-    def __init__(self, operator: str, lterm: Expression, rterm: Expression, allowedTypes: list[Type]) -> None:
+    def __init__(self, operator: str, lterm: Expression, rterm: Expression, allowedTypes: list[type]) -> None:
         super().__init__(operator, [lterm, rterm], allowedTypes)
 
     def lterm(self):
@@ -374,13 +388,17 @@ class ArrayIndex(Expression):
         return Kind.Literal
     
     def type(self, context: Context) -> Optional[Type]:
-        return self.array.type(context).contained
+        containerType = self.array.type(context)
+        if isinstance(containerType, ARRAY):
+            return containerType.contained
+        else:
+            return None
     
     def validate(self, context: Context) -> Iterator[Issue]:
-        yield from self.array.validate()
-        yield from self.index.validate()
-        yield from TypeError.check(self.array, ARRAY, context)
-        yield from TypeError.check(self.index, INT, context)
+        yield from self.array.validate(context)
+        yield from self.index.validate(context)
+        yield from TypeError.check(self.array, ARRAY(None), context)
+        yield from TypeError.check(self.index, INT(), context)
 
     def __eq__(self, obj: object) -> bool:
         return type(self) == type(obj) \
@@ -408,11 +426,19 @@ class TupleIndex(Expression):
         return self.tuple.kind(context)
     
     def type(self, context: Context) -> Optional[Type]:
-        return self.tuple.type(context).tupled[self.index]
+        containerType = self.tuple.type(context)
+        if isinstance(containerType, TUPLE) and self.index < len(containerType.tupled):
+            return self.tuple.type(context).tupled[self.index]
+        else:
+            return None
 
     def validate(self, context: Context) -> Iterator[Issue]:
-        yield from self.tuple.validate()
-        yield from TypeError.check(self.tuple, TUPLE, context)
+        yield from self.tuple.validate(context)
+        for i in TypeError.check(self.tuple, TUPLE(None), context):
+            yield i
+            return
+        if self.index >= len(self.tuple.type(context).tupled):
+            yield Issue(IssueType.Error, self, "Tuple index is out of bounds")
 
     def __eq__(self, obj: object) -> bool:
         return type(self) == type(obj) \

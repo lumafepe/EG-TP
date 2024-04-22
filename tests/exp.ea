@@ -1,0 +1,14 @@
+var arr = ['b',2,'a'];
+
+const arr2 = arr;
+
+arr[arr2[1]] = 2;
+
+func batata(input: [int]): (int,string) {
+
+}
+
+
+const ans = batata(arr2);
+
+i = ans#1;

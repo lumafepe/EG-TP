@@ -73,7 +73,7 @@ class Assignment(Element):
         yield from self.dest.validate(context)
         yield from self.value.validate(context)
 
-        if self.dest.kind(context) != Kind.Variable:
+        if self.dest.kind(context) not in [Kind.Variable, None]:
             yield Issue(IssueType.Error, self, f"Cannot assign to expression of kind {self.dest.kind(context)}")
         else:
             yield from TypeError.check(self.value, self.dest.type(context), context)
@@ -131,7 +131,7 @@ class FunctionArg(Element):
         if context.is_declared(self.name):
             yield Issue(IssueType.Error, self, f"Redefinition of symbol '{self.name}'")
         else:
-            context.declare_variable(Declaration(False, self.name, type, None))
+            context.declare_variable(Declaration(False, self.name, self.type, None))
 
     def __eq__(self, obj) -> bool:
         return type(self) == type(obj) \
@@ -162,8 +162,7 @@ class Function(Element):
 
         yield from self.body.validate(subcontext)
         context.declare_function(self)
-        if subcontext.maxLoops > context.maxLoops:
-            context.set_maxLoops(subcontext.maxLoops)
+        context.stats.mergeWith(subcontext.stats)
 
     def __eq__(self, obj) -> bool:
         return type(self) == type(obj) \
@@ -195,11 +194,7 @@ class Return(Element):
     
     def validate(self, context: Context) -> Iterator[Issue]:
         yield from self.value.validate(context)
-        if not self.value.type(context).isAssignableFrom(context.get_returnType()):
-            yield Issue(IssueType.Error, self, f"Wrong type, {self.value.type(context)} is returned but {context.get_returnType()} was expected ")
-        
-    def type(self,context:Context) -> Type :
-        return context.get_returnType()
+        yield from TypeError.check(self.value, context.get_returnType(), context)
 
     def __str__(self) -> str:
         return f"return {str(self.value)}"
@@ -288,14 +283,12 @@ class While(Element):
         
     def validate(self, context: Context) -> Iterator[Issue]:
         yield from self.condition.validate(context)
-        if not self.condition.type(context).isAssignableFrom(BOOL()):
-            yield Issue(IssueType.Error, self.condition,"Condition is not Boolean")
+        if not BOOL().isAssignableFrom(self.condition.type(context)):
+            yield Issue(IssueType.Error, self.condition,"Condition must be of type bool")
         
         scopeContext = Context(context,context.get_returnType())
         yield from self.scope.validate(scopeContext)
-        
-        if scopeContext.maxLoops + 1 > context.maxLoops:
-            context.set_maxLoops(scopeContext.maxLoops + 1)
+        context.stats.mergeWith(scopeContext.stats)
     
     def __eq__(self, obj) -> bool:
         return type(self) == type(obj) \
@@ -324,14 +317,12 @@ class Do_while(Element):
         
     def validate(self, context: Context) -> Iterator[Issue]:
         yield from self.condition.validate(context)
-        if not self.condition.type(context).isAssignableFrom(BOOL()):
-            yield Issue(IssueType.Error, self.condition,"Condition is not Boolean")
+        if not BOOL().isAssignableFrom(self.condition.type(context)):
+            yield Issue(IssueType.Error, self.condition,"Condition must be of type bool")
         
         scopeContext = Context(context,context.get_returnType())
         yield from self.scope.validate(scopeContext)
-        
-        if scopeContext.maxLoops + 1 > context.maxLoops:
-            context.set_maxLoops(scopeContext.maxLoops + 1)
+        context.stats.mergeWith(scopeContext.stats)
     
     def __eq__(self, obj) -> bool:
         return type(self) == type(obj) \

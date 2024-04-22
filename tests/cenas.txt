@@ -1,0 +1,8 @@
+warnings:
+constant conditionals in ifs
+unused variables
+too nested code
+missing return statement
+
+infos:
+this var could be const
