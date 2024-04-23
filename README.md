@@ -3,7 +3,7 @@
 # Como usar
 1. Instalar dependencias
 ```bash
-pip install requirements.txt
+pip install -r requirements.txt
 ```
 2. Rodar frontend
 ```bash
