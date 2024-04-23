@@ -121,6 +121,39 @@ class Array(UniTypeMultiValueExpression):
     def type(self, context: Context) -> Optional[Type]:
         return ARRAY(self.getBiggerType(context))
     
+class NewArray(Expression):
+    def __init__(self, elemType: Type, numElems: Expression) -> None:
+        super().__init__()
+        self.elemType = elemType
+        self.numElems = numElems
+
+    def kind(self, context: Context) -> Optional[Kind]:
+        return Kind.Constant if self.numElems.kind(context) == Kind.Constant else Kind.Literal
+
+    def type(self, context: Context) -> Optional[Type]:
+        return ARRAY(self.elemType)
+
+    def validate(self, context: Context) -> Iterator[Issue]:
+        yield from self.elemType.validate(context)
+        yield from self.numElems.validate(context)
+        yield from TypeError.check(self.numElems, INT(), context)
+
+    def __eq__(self, obj) -> bool:
+        return type(self) == type(obj) \
+            and self.elemType == obj.elemType \
+            and self.numElems == obj.numElems
+
+
+    def __str__(self) -> str:
+        return f"{self.elemType}[{self.numElems}]"
+
+    def _toHTML(self, errors, depth=0) -> str:
+        s = self.elemType.toHTML(errors)
+        s += """<span class="operator">[</span>"""
+        s += self.numElems.toHTML(errors)
+        s += """<span class="operator">]</span>"""
+        return s
+
 class List(UniTypeMultiValueExpression):
     def __init__(self, values: list[Expression]) -> None:
         super().__init__(values, '<' , '>')

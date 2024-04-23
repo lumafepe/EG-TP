@@ -39,7 +39,8 @@ lark_parser = r"""
 
     constant: INT | CHAR | STRING | BOOL
     tuple: "(" (expression ",")+ expression? ")"
-    array: "[" _sequence "]" | type "[" INT "]"
+    array: "[" _sequence "]"
+    new_array: type "[" expression "]"
     list: "<" (_sequence | (expression ",")* expression ":" expression) ">"
 
     OP0: "\|\|"
@@ -78,6 +79,7 @@ lark_parser = r"""
         | variable
         | tuple
         | array
+        | new_array
         | list
         | function_call
         | "(" expression ")"
