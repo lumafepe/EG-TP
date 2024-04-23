@@ -134,10 +134,11 @@ class TUPLE(Type):
         return type(self) == type(other) and self.tupled == other.tupled
 
     def __str__(self):
-        return f"({', '.join(str(t) for t in self.tupled)})"
+        return f"({', '.join(str(t) for t in self.tupled) if self.tupled != None else ','})"
 
     def _toHTML(self, errors, depth=0) -> str:
         return f"""<span class="encloser">({'<span class="operator">, </span>'.join(tip.toHTML(errors) for tip in self.tupled)})</span>"""
+
 
 class Container(Type):
     def __init__(self, contained: Optional[Type]) -> None:
@@ -150,11 +151,10 @@ class Container(Type):
 
     def __eq__(self, other):
         return type(self) == type(other) and self.contained == other.contained
-    
 
 class ARRAY(Container):
     def __str__(self):
-        return f"[{self.contained}]"
+        return f"[{self.contained if self.contained != None else '?'}]"
     
     def printInstance(self, value) -> str:
         return f"[{', '.join(self.contained.printInstance(v) for v in value)}]"
@@ -165,12 +165,10 @@ class ARRAY(Container):
     
     def _toHTML(self, errors, depth=0) -> str:
         return f"""<span class="encloser">[{self.contained.toHTML(errors)}]"""
-    
-    
 
 class LIST(Container):
     def __str__(self):
-        return f"<{self.contained}>"
+        return f"<{self.contained if self.contained != None else '?'}>"
     
     def printInstance(self, value) -> str:
         return f"<{', '.join(self.contained.printInstance(v) for v in value)}>"
@@ -181,3 +179,23 @@ class LIST(Container):
     
     def _toHTML(self, errors, depth=0) -> str:
         return f"""<span class="encloser"><{self.contained.toHTML(errors)}>"""
+
+
+class VOID(Type):
+    def isAssignableFrom(self, other: Type) -> bool:
+        return False
+
+    def __str__(self):
+        return "void"
+    
+    def __eq__(self, other: object):
+        return type(self) == type(other)
+    
+    def _toHTML(self, errors, depth=0) -> str:
+        assert False #This type shouldn't appear in html
+    
+    def printInstance(self, value) -> str:
+        assert False #There are no void instances
+
+    def toHTMLInstance(self, value) -> str:
+        assert False #There are no void instances

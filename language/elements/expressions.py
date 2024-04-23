@@ -434,10 +434,11 @@ class TupleIndex(Expression):
 
     def validate(self, context: Context) -> Iterator[Issue]:
         yield from self.tuple.validate(context)
-        for i in TypeError.check(self.tuple, TUPLE(None), context):
-            yield i
-            return
-        if self.index >= len(self.tuple.type(context).tupled):
+        
+        ttype = self.tuple.type(context)
+        if not isinstance(ttype, TUPLE):
+            yield TypeError(self.tuple, TUPLE(None), ttype)
+        elif self.index >= len(self.tuple.type(context).tupled):
             yield Issue(IssueType.Error, self, "Tuple index is out of bounds")
 
     def __eq__(self, obj: object) -> bool:

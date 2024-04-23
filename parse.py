@@ -95,10 +95,10 @@ lark_parser = r"""
     while_cond: "while" condition scope
     do_while: "do" scope "while" condition ";"
 
-    function: "func" IDENTIFIER "(" params ")" ":" type scope
+    function: "func" IDENTIFIER "(" params ")" (":" type)? scope
     params: ((IDENTIFIER ":" type ",")* IDENTIFIER ":" type)?
     function_call: IDENTIFIER "(" _sequence ")"
-    func_return: "return" expression
+    func_return: "return" expression?
 
     program: (declaration ";" | assignment ";" | decl_ass ";" | function_call ";" | func_return ";" | if_cond | while_cond | do_while | function)*
 

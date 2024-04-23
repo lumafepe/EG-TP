@@ -1,7 +1,7 @@
 from typing import Iterator, Optional
 from .element import Element
-from .expressions import Expression, Kind
-from .types import Type,BOOL
+from .expressions import Expression, Kind, Value
+from .types import VOID, Type,BOOL
 from ..context import Context
 from ..issue import Issue, IssueType, TypeError
 
@@ -15,7 +15,14 @@ class Declaration(Element):
         self.value = value
 
     def type(self, context: Context):
-        return self.valueType if self.valueType != None else self.value.type(context)
+        if self.valueType != None:
+            return self.valueType
+        
+        vtype = self.value.type(context)
+        if not isinstance(vtype, VOID):
+            return vtype
+        
+        return None
 
     def validate(self, context: Context) -> Iterator[Issue]:
         if self.valueType != None:
@@ -28,7 +35,9 @@ class Declaration(Element):
             if self.const:
                 yield Issue(IssueType.Error, self, "Constants must be initialized")
             elif self.valueType == None:
-                yield Issue(IssueType.Error, self, "Cannot infer type of uninitialized variable")
+                yield Issue(IssueType.Error, self, "Can't infer type of uninitialized variable")
+        elif isinstance(self.value.type(context), VOID):
+            yield Issue(IssueType.Error, self.value, "Can't assign variable to void return type")
         else:
             yield from TypeError.check(self.value, self.valueType, context)
 
@@ -179,8 +188,9 @@ class Function(Element):
         s=f"""<span class="line" index={depth}></span><span class="control">func </span>"""
         args = f"""<span class="encloser">({'<span class="operator">, </span>'.join(arg.toHTML(errors) for arg in self.args)})</span>"""
         s += f"""<span class="function">{self.name}{args}</span>"""
-        s += f"""<span class="operator"> : </span>"""
-        s += self.returnType.toHTML(errors)
+        if not isinstance(self.returnType, VOID):
+            s += f"""<span class="operator"> : </span>"""
+            s += self.returnType.toHTML(errors)
         s += f"""<span class="line" index={depth}></span><span class="scope"> {{
 <br>{self.body.toHTML(errors,depth+1)}
 <br><span class="line" index={depth}></span>}}</span>"""
@@ -188,20 +198,30 @@ class Function(Element):
     
 
 class Return(Element):
-    def __init__(self, exp: Expression) -> None:
+    def __init__(self, exp: Optional[Expression]) -> None:
         super().__init__()
         self.value = exp
     
     def validate(self, context: Context) -> Iterator[Issue]:
-        yield from self.value.validate(context)
-        yield from TypeError.check(self.value, context.get_returnType(), context)
+        expectedType = context.get_returnType()
+
+        if expectedType == None:
+            yield Issue(IssueType.Error, self, "Return is only allowed inside functions")
+        elif self.value != None:
+            yield from self.value.validate(context)
+            yield from TypeError.check(self.value, context.get_returnType(), context)
+        elif not isinstance(expectedType, VOID):
+            yield Issue(IssueType.Error, self, "Expected expression after return")
 
     def __str__(self) -> str:
-        return f"return {str(self.value)}"
+        if self.value != None:
+            return f"return {str(self.value)}"
+        else:
+            return "return"
     
     def _toHTML(self, errors, depth=0) -> str:
-        s=f"""<span class="line" index={depth}></span><span class="control">return {self.value.toHTML(errors)}</span>"""
-        return s
+        s=f""" {self.value.toHTML(errors)}""" if self.value != None else ""
+        return f"""<span class="line" index={depth}></span><span class="control">return{s}</span>"""
     
     def __eq__(self, obj) -> bool:
          return type(self) == type(obj) \
@@ -218,15 +238,19 @@ class If(Element):
     
     def validate(self, context: Context) -> Iterator[Issue]:
         yield from self.condition.validate(context)
-        if not self.condition.type(context).isAssignableFrom(BOOL()):
+        if not BOOL().isAssignableFrom(self.condition.type(context)):
             yield Issue(IssueType.Error, self.condition,"Condition is not Boolean")
+        elif self.condition.kind(context) == Kind.Constant:
+            yield Issue(IssueType.Info, self.condition, "Condition is constant")
         
         ifContext = Context(context,context.get_returnType())
         yield from self.ifScope.validate(ifContext)
+        context.stats.mergeWith(ifContext.stats)
         
         if self.elseScope:
             elseContext = Context(context,context.get_returnType())
             yield from self.elseScope.validate(elseContext)
+            context.stats.mergeWith(elseContext.stats)
         
         if self.ifScope.isIf() and not self.ifScope.instructions[0].hasElse():
             yield Issue(IssueType.Info,self.ifScope,"Condition can be joint with top if")
@@ -285,10 +309,12 @@ class While(Element):
         yield from self.condition.validate(context)
         if not BOOL().isAssignableFrom(self.condition.type(context)):
             yield Issue(IssueType.Error, self.condition,"Condition must be of type bool")
+        elif self.condition.kind(context) == Kind.Constant and not isinstance(self.condition, Value):
+            yield Issue(IssueType.Info, self.condition, "Condition can be simplified")
         
         scopeContext = Context(context,context.get_returnType())
         yield from self.scope.validate(scopeContext)
-        context.stats.mergeWith(scopeContext.stats)
+        context.stats.mergeWith(scopeContext.stats, isLoop=True)
     
     def __eq__(self, obj) -> bool:
         return type(self) == type(obj) \
@@ -317,12 +343,15 @@ class Do_while(Element):
         
     def validate(self, context: Context) -> Iterator[Issue]:
         yield from self.condition.validate(context)
-        if not BOOL().isAssignableFrom(self.condition.type(context)):
-            yield Issue(IssueType.Error, self.condition,"Condition must be of type bool")
-        
+        condType = self.condition.type(context)
+        if not BOOL().isAssignableFrom(condType):
+            yield TypeError(self.condition, BOOL(), condType)
+        elif self.condition.kind(context) == Kind.Constant and not isinstance(self.condition, Value):
+            yield Issue(IssueType.Info, self.condition, "Condition can be simplified")
+
         scopeContext = Context(context,context.get_returnType())
         yield from self.scope.validate(scopeContext)
-        context.stats.mergeWith(scopeContext.stats)
+        context.stats.mergeWith(scopeContext.stats, isLoop=True)
     
     def __eq__(self, obj) -> bool:
         return type(self) == type(obj) \

@@ -6,9 +6,9 @@ from typing import Iterable
 # class syntax
 
 class IssueType(Enum):
-    Warning = 1
-    Error = 2
-    Info = 3
+    Info = 1
+    Warning = 2
+    Error = 3
 
 class Issue:
     def __init__(self, type: IssueType, elem, msg: str) -> None:

@@ -212,7 +212,10 @@ class T(Transformer):
 
     def function(self, token):
         self.counter['functions'] += 1
-        return control.Function(token[0],token[1],token[2],token[3])
+        if isinstance(token[2], control.Program):
+            return control.Function(token[0],token[1],types.VOID(),token[2])
+        else:
+            return control.Function(token[0],token[1],token[2],token[3])
 
     def params(self, token):
         return [control.FunctionArg(token[i], token[i+1]) for i in range(0, len(token), 2)]
@@ -222,7 +225,10 @@ class T(Transformer):
         return expressions.Function_call(token[0], token[1:])
 
     def func_return(self, token):
-        return control.Return(token[0])
+        if len(token) == 0:
+            return control.Return(None)
+        else:
+            return control.Return(token[0])
 
     def program(self, token):
         self.counter['instructions'] += 1
