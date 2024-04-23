@@ -52,12 +52,14 @@
             display: inline-block;
         }
         .sugestion:hover::after {
+            z-index: 9997;
             content: attr(message);
             position: absolute;
             top: 100%;
             left: 0;
             background-color: rgba(0, 0, 0, 0.8);
             color: white;
+            margin-top: var(--error-margin-top);
             padding: 5px;
             border-radius: 5px;
             white-space: nowrap;
@@ -68,12 +70,14 @@
             display: inline-block;
         }
         .warning:hover::after {
+            z-index: 9998;
             content: attr(message);
             position: absolute;
             top: 100%;
             left: 0;
             background-color: rgba(0, 0, 0, 0.8);
             color: white;
+            margin-top: var(--error-margin-top);
             padding: 5px;
             border-radius: 5px;
             white-space: nowrap;
@@ -84,12 +88,14 @@
             display: inline-block;
         }
         .error:hover::after {
+            z-index: 9999;
             content: attr(message);
             position: absolute;
             top: 100%;
             left: 0;
             background-color: rgba(0, 0, 0, 0.8);
             color: white;
+            margin-top: var(--error-margin-top);
             padding: 5px;
             border-radius: 5px;
             white-space: nowrap;
@@ -113,34 +119,28 @@
     </div>
 
     <script>
-        // JavaScript to make the content dynamic
-        const underlineSugestionElements = document.querySelectorAll('.sugestion');
+        function underlineElements(selector) {
+            const elements = document.querySelectorAll(selector);
 
-        underlineSugestionElements.forEach(element => {
-            const message = element.getAttribute('message');
-            element.setAttribute('message', message); // Set the data-message attribute
-        });
+            elements.forEach(element => {
+                const index = element.getAttribute('index');
+                element.style.setProperty('--error-margin-top', 5 + index * 44 + 'px');
+                const message = element.getAttribute('message');
+                element.setAttribute('message', message); // Set the data-message attribute
+            });
+        }
 
-        const underlineWarningElements = document.querySelectorAll('.warning');
+        underlineElements('.sugestion');
+        underlineElements('.warning');
+        underlineElements('.error');
 
-        underlineWarningElements.forEach(element => {
-            const message = element.getAttribute('message');
-            element.setAttribute('message', message); // Set the data-message attribute
-        });
-
+    </script>
+    <script>
         const lines = document.querySelectorAll('.line');
 
         lines.forEach(element => {
             const index = element.getAttribute('index');
             element.style.marginLeft = index*20 + 'px';
-        });
-    </script>
-    <script>
-        const margins = document.querySelectorAll('.error');
-
-        underlineErrorElements.forEach(element => {
-            const message = element.getAttribute('message');
-            element.setAttribute('message', message); // Set the data-message attribute
         });
     </script>
 </body>
