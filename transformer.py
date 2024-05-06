@@ -59,6 +59,9 @@ class T(Transformer):
 
     def array(self, token):
         return expressions.Array(token)
+    
+    def new_array(self, token):
+        return expressions.NewArray(token[0], token[1])
 
     def list(self, token):
         return expressions.List(token)
