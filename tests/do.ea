@@ -1,0 +1,17 @@
+func fib(n : int) : int {
+    var num1 :int = 0;
+    const num2 :int = 1;
+    var nextNum : int;
+    const i : int = 1;
+    do{
+        nextNum = num1+num2;
+        num1 = num2;
+        num2 = nextNum;
+    } while (i<n);
+    return num1;
+}
+
+var a : int = fib(10);
+var b : int = fib("10");
+var c : string = fib("10");
+var d : int = fib('0');

@@ -3,6 +3,7 @@ import sys
 from transformer import T
 from language.context import Context
 from collections import defaultdict
+import graphviz
 
 
 #const_tuple: "(" ( (constant ",")+ constant? | constant "," | ) ")"
@@ -136,8 +137,16 @@ def parse(input):
     errors = defaultdict(set)
     for i in linguagem.validate(c):
         errors[i.elem.id].add(i)
-
+    dot = graphviz.Digraph()
+    linguagem.append_to_graph(dot,True)
+    html_content = dot.pipe(format='svg').decode('utf-8')
+    
+    
     maxDepth = c.stats.maxLoops
     counters = transformer.counter
     main_instructions = len(linguagem.instructions)
-    return (linguagem,errors,maxDepth,counters,main_instructions)
+    return (linguagem,errors,maxDepth,counters,main_instructions,html_content)
+
+if __name__ == '__main__':
+    with open(sys.argv[1]) as f:
+        parse(f.read())

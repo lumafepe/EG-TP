@@ -9,3 +9,4 @@ lark==1.1.9
 MarkupSafe==2.1.5
 soupsieve==2.5
 Werkzeug==3.0.2
+graphviz==0.20.3

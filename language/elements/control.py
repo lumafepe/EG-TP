@@ -4,6 +4,7 @@ from .expressions import Expression, Kind, Value
 from .types import VOID, Type,BOOL
 from ..context import Context
 from ..issue import Issue, IssueType, TypeError
+from graphviz import nohtml, Graph
 
 
 class Declaration(Element):
@@ -66,6 +67,10 @@ class Declaration(Element):
             s += f"""<span class="operator"> = </span>"""
             s += self.value.toHTML(errors)
         return s
+
+    def append_to_graph(self, graph: Graph,NewScope=False):
+        graph.node(str(self.id), nohtml(str(self)), shape="oval")
+        return str(self.id),[str(self.id)]
         
             
         
@@ -100,6 +105,10 @@ class Assignment(Element):
         s += self.value.toHTML(errors)
         return s
 
+    def append_to_graph(self, graph: Graph,NewScope=False):
+        graph.node(str(self.id), nohtml(str(self)), shape="oval")
+        return str(self.id),[str(self.id)]
+
 
 class Program(Element):
     def __init__(self, instructions: list[Element]) -> None:
@@ -127,6 +136,45 @@ class Program(Element):
     
     def isIf(self) -> bool:
         return len(self.instructions)==1 and type(self.instructions[0]) == If
+    
+    def append_to_graph(self, graph: Graph,NewScope=False):
+        if NewScope:
+            graph.node(str(self.id)+"S", "START", shape="oval")
+            graph.node(str(self.id)+"E", "END", shape="oval")
+            
+            r = str(self.id)+"S"
+            prev = [str(self.id)+"S"]
+            prevT = None
+            instructions= self.instructions
+        elif self.instructions:
+                f,l = self.instructions[0].append_to_graph(graph)
+                r = f
+                prev=l
+                prevT = self.instructions[0]
+                instructions = self.instructions[1:]
+        
+        
+        for instruction in instructions :
+            f,l = instruction.append_to_graph(graph)
+            for p in prev:
+                if isinstance(prevT,While) or isinstance(prevT,Do_while):
+                    graph.edge(p,f,"False")
+                else:
+                    graph.edge(p,f)
+            prevT=instruction
+            prev=l
+            
+        if NewScope:
+            for p in prev:
+                if isinstance(prevT,While) or isinstance(prevT,Do_while):
+                    graph.edge(p,str(self.id)+"E","False")
+                else:
+                    graph.edge(p,str(self.id)+"E")
+            return r,[str(self.id)+"E"]
+        else:
+            return r,prev
+        
+    
 
 class FunctionArg(Element): 
     def __init__(self, name: str, type: Type) -> None:
@@ -148,7 +196,7 @@ class FunctionArg(Element):
             and self.type == obj.type
 
     def __str__(self) -> str:
-        return f"{self.name}: {self.type}"
+        return f"{self.name}: {str(self.type)}"
     
     def _toHTML(self, errors, depth=0) -> str:
         return f'<span class="operator"><span class="variable">{self.name}</span> : {self.type.toHTML(errors)}</span>'
@@ -195,6 +243,14 @@ class Function(Element):
 <br>{self.body.toHTML(errors,depth+1)}
 <br><span class="line" index={depth}></span>}}</span>"""
         return s
+
+    def append_to_graph(self, graph: Graph,NewScope=False):
+        with graph.subgraph(name="cluster_"+self.name) as c:
+            c.attr(style='dotted', color='blue', penwidth='2',label=nohtml(self.name))
+            c.node(str(self.id),nohtml(f"func {self.name}({', '.join(str(x) for x in self.args)}): {self.returnType}"), shape="oval")
+            f,l = self.body.append_to_graph(c,True)
+            c.edge(str(self.id),f)
+        return str(self.id),l
     
 
 class Return(Element):
@@ -226,6 +282,10 @@ class Return(Element):
     def __eq__(self, obj) -> bool:
          return type(self) == type(obj) \
             and self.value == obj.value
+    
+    def append_to_graph(self, graph: Graph,NewScope=False):
+        graph.node(str(self.id), nohtml(str(self)), shape="oval")
+        return str(self.id),[str(self.id)]
     
     
 
@@ -298,6 +358,18 @@ class If(Element):
         s = s.replace(f"""<span class="control">elif</span><span class="line" index={depth}></span><span class="control">if </span>""",
                      """<span class="control"> elif </span>""")
         return s
+    
+    def append_to_graph(self, graph: Graph,NewScope=False):
+        graph.node(str(self.id), nohtml(str(self.condition)), shape="Mdiamond")
+        f,fl = self.ifScope.append_to_graph(graph)
+        graph.edge(str(self.id), f,label="True")
+        if self.elseScope:
+            f,el = self.elseScope.append_to_graph(graph)
+            graph.edge(str(self.id), f,label="False")
+            return str(self.id),fl+el
+        else :   
+            return str(self.id),fl
+
 
 class While(Element):
     def __init__(self, condition:Expression, scope: Program) -> None:
@@ -334,7 +406,15 @@ while ({str(self.condition)}) {{
 <br>{self.scope.toHTML(errors,depth+1)}
 <br><span class="line" index={depth}></span>}}</span>"""
         return s
-            
+    
+    def append_to_graph(self, graph: Graph,NewScope=False):
+        graph.node(str(self.id), nohtml(f"while ({str(self.condition)})"), shape="Mdiamond")
+        f,l = self.scope.append_to_graph(graph)
+        graph.edge(str(self.id), f,label="True")
+        for i in l:
+            graph.edge(i,str(self.id))
+        return str(self.id),[str(self.id)]
+    
 class Do_while(Element):
     def __init__(self, condition:Expression, scope: Program) -> None:
         super().__init__()
@@ -373,3 +453,11 @@ do {{
         s += f"""<span class="line"><span class="control">while </span>"""
         s += f"""<span class="encloser">({self.condition.toHTML(errors)}) </span></span>"""
         return s
+    
+    def append_to_graph(self, graph: Graph,NewScope=False):
+        graph.node(str(self.id), nohtml(str(self.condition)), shape="Mdiamond")
+        f,l = self.scope.append_to_graph(graph)
+        for p in l:
+            graph.edge(p,str(self.id))
+        graph.edge(str(self.id),f,label="True")
+        return f,[str(self.id)]

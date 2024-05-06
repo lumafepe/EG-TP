@@ -57,7 +57,7 @@ class Myserver(Flask):
     def getHTML(self):
         with open(self.input_file) as f:
             data = f.read()
-            linguagem, errors, maxDepth, counters, main_instructions = parse(data)
+            linguagem, errors, maxDepth, counters, main_instructions,svg = parse(data)
             c = Counter()
             for i in errors.values():
                 for j in i:
@@ -73,6 +73,7 @@ class Myserver(Flask):
         with open('a.html') as f:
             html = f.read().replace(r"{REPLACE}", join_messages(HTML))
             html = html.replace(r"{REPLACE_2}", countersHTML(values))
+            html = html.replace(r"{REPLACE_SVG}", svg)
             return html
 
 
