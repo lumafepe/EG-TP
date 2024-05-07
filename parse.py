@@ -114,16 +114,16 @@ lark_parser = r"""
 """
 
 
-def successorsToEnd(g:pgv.AGraph,n:int):
-    s=set()
+def isItsOwnSuccessor(g:pgv.AGraph,n):
     nexts = list(g.successors(n))
     while nexts:
-        n = nexts.pop()
-        if n.endswith('E'):
+        succ = nexts.pop()
+        if succ.endswith('E'):
             continue
-        s.add(n)
-        nexts.extend(g.successors(n))
-    return s
+        if n == succ:
+            return True
+        nexts.extend(g.successors(succ))
+    return False
     
 
 
@@ -156,8 +156,7 @@ def parse(input):
     # while can be if 
     s = list(filter(lambda x :x.attr['label'].startswith("while") ,G.nodes()))
     for i in s:
-        suc = successorsToEnd(G,i)
-        if not any([G.has_edge(x,i) for x in suc]):
+        if not isItsOwnSuccessor(G,i):
             errors[int(i)].add(Issue(IssueType.Info,Element.elems[int(i)],"This should be an If contion"))
             
     
