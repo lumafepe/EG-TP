@@ -1,13 +1,18 @@
 func fib(n : int) : int {
     var num1 :int = 0;
-    const num2 :int = 1;
+    var num2 :int = 1;
     var nextNum : int;
-    const i : int = 1;
-    do{
+    var i : int = 1;
+    while (i<n){
         nextNum = num1+num2;
         num1 = num2;
+        return 5;
         num2 = nextNum;
-    } while (i<n);
+        if (num2){
+            return 4;
+        }
+        return 3;
+    }
     return num1;
 }
 

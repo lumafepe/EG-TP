@@ -5,10 +5,12 @@ from typing import Iterator
 
 class Element(ABC):
     last_id = 0
+    elems={}
     
     def __init__(self) -> None:
         Element.last_id += 1
         self.id = Element.last_id
+        self.elems[self.id]=self
 
     @abstractmethod
     def validate(self, context: Context) -> Iterator[Issue]:

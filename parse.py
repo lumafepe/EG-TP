@@ -3,7 +3,9 @@ import sys
 from transformer import T
 from language.context import Context
 from collections import defaultdict
-import graphviz
+import pygraphviz as pgv
+from language.issue import IssueType,Issue
+from language.elements.element import Element
 
 
 #const_tuple: "(" ( (constant ",")+ constant? | constant "," | ) ")"
@@ -112,20 +114,17 @@ lark_parser = r"""
 """
 
 
-input = """
-func ola(i:int,o:char) : int {
-    if (i == o) {
-        if (o >= i ){ return 7;}
-    } elif (i<o){
-        return 3;
-    } else{
-        return 4;
-    }
-}
-
-
-var a : int = ola("a",'a');
-"""
+def successorsToEnd(g:pgv.AGraph,n:int):
+    s=set()
+    nexts = list(g.successors(n))
+    while nexts:
+        n = nexts.pop()
+        if n.endswith('E'):
+            continue
+        s.add(n)
+        nexts.extend(g.successors(n))
+    return s
+    
 
 
 def parse(input):
@@ -139,9 +138,28 @@ def parse(input):
     errors = defaultdict(set)
     for i in linguagem.validate(c):
         errors[i.elem.id].add(i)
-    dot = graphviz.Digraph()
-    linguagem.append_to_graph(dot,True)
-    html_content = dot.pipe(format='svg').decode('utf-8')
+    
+    G = pgv.AGraph(directed=True)
+    linguagem.append_to_graph(G,True)
+    html_content = G.draw(format='svg', prog='dot').decode()
+    
+    # unreachable code
+    s = list(filter(lambda x : len(G.in_edges(x)) == 0 and x.isnumeric() ,G.nodes()))
+    while s:
+        si = s.pop(0)
+        i = int(si)
+        errors[i].add(Issue(IssueType.Warning,Element.elems[i],"Unreachable Code"))
+        nexts = G.successors(si)
+        G.remove_node(si)
+        s.extend(list(filter(lambda x : len(G.in_edges(x)) == 0 and x.isnumeric() ,nexts)))
+    
+    # while can be if 
+    s = list(filter(lambda x :x.attr['label'].startswith("while") ,G.nodes()))
+    for i in s:
+        suc = successorsToEnd(G,i)
+        if not any([G.has_edge(x,i) for x in suc]):
+            errors[int(i)].add(Issue(IssueType.Info,Element.elems[int(i)],"This should be an If contion"))
+            
     
     
     maxDepth = c.stats.maxLoops
