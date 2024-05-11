@@ -162,12 +162,12 @@ class Program(Element):
         for instruction in instructions :
             f,l = instruction.append_to_graph(graph,end=Nend)
             for p,k in prev:
-                graph.add_edge(p,f,k)
+                graph.add_edge(p,f,label=k)
             prev=l
             
         if NewScope:
             for p,k in prev:
-                graph.add_edge(p,str(self.id)+"E",k)
+                graph.add_edge(p,str(self.id)+"E",label=k)
             return r,[(str(self.id)+"E","")]
         else:
             return r,prev
@@ -364,10 +364,10 @@ class If(Element):
     def append_to_graph(self, graph: pgv.AGraph,NewScope=False, end=None):
         graph.add_node(str(self.id), label= str(self.condition), shape="Mdiamond")
         f,fl = self.ifScope.append_to_graph(graph,end=end)
-        graph.add_edge(str(self.id), f,"True")
+        graph.add_edge(str(self.id), f,label="True")
         if self.elseScope:
             f,el = self.elseScope.append_to_graph(graph,end=end)
-            graph.add_edge(str(self.id), f,"False")
+            graph.add_edge(str(self.id), f,label="False")
             return str(self.id),fl+el
         else :   
             return str(self.id),fl+[(str(self.id),"False")]
@@ -410,12 +410,12 @@ while ({str(self.condition)}) {{
         return s
     
     def append_to_graph(self, graph: pgv.AGraph,NewScope=False, end=None):
-        graph.add_node(str(self.id), label= f"while ({str(self.condition)})", shape="Mdiamond")
+        graph.add_node(str(self.condition.id), label= f"while ({str(self.condition)})", shape="Mdiamond")
         f,l = self.scope.append_to_graph(graph,end=end)
-        graph.add_edge(str(self.id), f,"True")
+        graph.add_edge(str(self.condition.id), f,label="True")
         for i,k in l:
-            graph.add_edge(i,str(self.id),k)
-        return str(self.id),[(str(self.id),"False")]
+            graph.add_edge(i,str(self.condition.id),k)
+        return str(self.condition.id),[(str(self.condition.id),"False")]
     
 class Do_while(Element):
     def __init__(self, condition:Expression, scope: Program) -> None:
@@ -457,9 +457,9 @@ do {{
         return s
     
     def append_to_graph(self, graph: pgv.AGraph,NewScope=False, end=None):
-        graph.add_node(str(self.id), label= f"while ({str(self.condition)})", shape="Mdiamond")
+        graph.add_node(str(self.condition.id), label= f"while ({str(self.condition)})", shape="Mdiamond")
         f,l = self.scope.append_to_graph(graph,end=end)
         for p,v in l:
-            graph.add_edge(p,str(self.id),v)
-        graph.add_edge(str(self.id),f,"True")
-        return f,[(str(self.id),"False")]
+            graph.add_edge(p,str(self.condition.id),label=v)
+        graph.add_edge(str(self.condition.id),f,label="True")
+        return f,[(str(self.condition.id),"False")]
