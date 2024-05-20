@@ -6,6 +6,8 @@ from collections import defaultdict
 import pygraphviz as pgv
 from language.issue import IssueType,Issue
 from language.elements.element import Element
+from language.elements.control import Function,Program,FunctionArg
+from language.elements.types import VOID,ANY
 
 
 #const_tuple: "(" ( (constant ",")+ constant? | constant "," | ) ")"
@@ -133,7 +135,13 @@ def parse(input):
     tree = p.parse(input)  # retorna uma tree
     transformer = T()
     linguagem = transformer.transform(tree)
+    
+    printFuntion = Function("print",[FunctionArg("text",ANY())],VOID(),Program([]))
+    
+    
     c = Context()
+    
+    c.declare_function(printFuntion)
 
     errors = defaultdict(set)
     for i in linguagem.validate(c):

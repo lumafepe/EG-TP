@@ -5,6 +5,7 @@ from .types import Type,BOOL,INT,LIST,ARRAY,TUPLE,CHAR,STRING
 from .element import Element
 from ..context import Context
 from ..issue import Issue, IssueType, TypeError
+import pygraphviz as pgv
 
 class Kind(Enum):
     Constant = 0
@@ -227,7 +228,7 @@ class Function_call(Expression):
                 yield Issue(IssueType.Error,self, f"Wrong Number of arguments,  {len(args)} expected but {len(self.args)} where given")
             else:
                 for arg,expectedType in zip(self.args,elementTypes):
-                    if not arg.type(context).isAssignableFrom(expectedType):
+                    if not expectedType.isAssignableFrom(arg.type(context)):
                         yield Issue(IssueType.Error,arg, f"Argument has wrong type. {str(expectedType)} expected but got {str(arg.type(context))} instead")
             
         context.use_symbol(self.name)
@@ -237,11 +238,15 @@ class Function_call(Expression):
     
     def _toHTML(self, errors, depth=0) -> str:
         args = f"""<span class="encloser">({'<span class="operator">, </span>'.join(t.toHTML(errors) for t in self.args)})</span>"""
-        return f"""<span class="function">{self.name}{args}</span>"""
+        return f"""<span class="line" index={depth}></span><span class="function">{self.name}{args}</span>"""
         
     
     def type(self, context: Context) -> Optional[Type]:
         return context.get_funtion_declaration(self.name).returnType
+    
+    def append_to_graph(self, graph: pgv.AGraph,NewScope=False, end=None):
+        graph.add_node(str(self.id), label=str(self), shape="oval")
+        return str(self.id),[(str(self.id),"")]
 
 
 #Assumes all operands are of the same type, or are assignable to the same type

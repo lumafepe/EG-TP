@@ -109,6 +109,22 @@ class BOOL(Primitive):
 
     def __str__(self):
         return 'bool'
+    
+class ANY(Primitive):
+    def __init__(self) -> None:
+        super().__init__()
+        
+    def isAssignableFrom(self, other: Type) -> bool:
+        return True
+    
+    def printInstance(self, value) -> str:
+        return f"'{value}'"
+    
+    def toHTMLInstance(self, value) -> str:
+        return f"""<span class="string">'{value}'</span>"""
+
+    def __str__(self):
+        return 'any'
 
 class TUPLE(Type):
     def __init__(self, tupled: Optional[list[Type]]):
