@@ -118,8 +118,12 @@ lark_parser = r"""
 
 def isItsOwnSuccessor(g:pgv.AGraph,n):
     nexts = list(g.successors(n))
+    visited=set()
     while nexts:
         succ = nexts.pop()
+        if succ in visited:
+            continue
+        visited.add(succ)
         if succ.endswith('E'):
             continue
         if n == succ:
@@ -146,7 +150,6 @@ def parse(input):
     errors = defaultdict(set)
     for i in linguagem.validate(c):
         errors[i.elem.id].add(i)
-    
     G = pgv.AGraph(directed=True)
     linguagem.append_to_graph(G,True)
     html_content = G.draw(format='svg', prog='dot').decode()
@@ -160,13 +163,11 @@ def parse(input):
         nexts = G.successors(si)
         G.remove_node(si)
         s.extend(list(filter(lambda x : len(G.in_edges(x)) == 0 and x.isnumeric() ,nexts)))
-    
     # while can be if 
     s = list(filter(lambda x :x.attr['label'].startswith("while") ,G.nodes()))
     for i in s:
         if not isItsOwnSuccessor(G,i):
             errors[int(i)].add(Issue(IssueType.Info,Element.elems[int(i)],"This should be an If contion"))
-            
     
     
     maxDepth = c.stats.maxLoops
